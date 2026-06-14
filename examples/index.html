@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SenangStart XR - Component Showcase</title>
+  <meta name="description" content="A complete SenangStart XR component showcase for A-Frame and WebXR">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="js/senangstart-xr.js?v=20260606-slider-width-fix"></script>
+  <script>
+    const DEMO_FONT = '../Outfit-Regular.ttf';
+
+    [
+      ['sxr-button', 'fontFamily'],
+      ['sxr-circle-loader', 'fontFamily'],
+      ['sxr-circle-timer', 'fontFamily'],
+      ['sxr-icon-label-button', 'fontFamily'],
+      ['sxr-input', 'fontFamily'],
+      ['sxr-label', 'fontFamily'],
+      ['sxr-radio', 'fontFamily'],
+      ['sxr-toggle', 'fontFamily']
+    ].forEach(function ([componentName, propertyName]) {
+      const component = AFRAME.components[componentName];
+      if (component && component.schema && component.schema[propertyName]) {
+        component.schema[propertyName].default = DEMO_FONT;
+      }
+    });
+
+    const state = {
+      clicks: 0,
+      mode: 'Orbit',
+      slider: 42,
+      vertical: 68,
+      progress: 0.64,
+      timer: 12
+    };
+
+    function setStatus(message) {
+      const status = document.querySelector('#statusText');
+      const log = document.querySelector('#activityLog');
+      if (status) {
+        status.setAttribute('value', message);
+      }
+      if (log) {
+        log.setAttribute('value', `Last event: ${message}`);
+      }
+    }
+
+    function setMetric(id, value) {
+      const el = document.querySelector(id);
+      if (el) {
+        el.setAttribute('value', value);
+      }
+    }
+
+    function onPrimaryClick() {
+      state.clicks += 1;
+      setMetric('#clickMetric', `Clicks ${state.clicks}`);
+      setStatus(`Primary action fired ${state.clicks} time${state.clicks === 1 ? '' : 's'}`);
+    }
+
+    function onBevelClick() {
+      setStatus('Beveled CTA pressed - depth, gap and bevel styling are active');
+    }
+
+    function onIconClick() {
+      setStatus('Icon button clicked');
+    }
+
+    function onIconLabelClick() {
+      setStatus('Icon + label button clicked');
+    }
+
+    function onToggle() {
+      state.mode = state.mode === 'Orbit' ? 'Inspect' : 'Orbit';
+      setMetric('#modeMetric', `Mode ${state.mode}`);
+      setStatus(`Toggle changed mode to ${state.mode}`);
+    }
+
+    function onRadioComfort() {
+      setMetric('#radioMetric', 'Comfort selected');
+      setStatus('Radio option selected: Comfort');
+    }
+
+    function onRadioFocus() {
+      setMetric('#radioMetric', 'Focus selected');
+      setStatus('Radio option selected: Focus');
+    }
+
+    function onInputClick() {
+      const input = document.querySelector('#demoInput');
+      if (!input || !input.components['sxr-input']) {
+        return;
+      }
+      input.components['sxr-input'].appendText('!');
+      setStatus('Input helper appended a character');
+    }
+
+    function onSlide(_event, percent) {
+      state.slider = Math.round(percent * 100);
+      setMetric('#sliderMetric', `Horizontal ${state.slider}%`);
+      setStatus(`Horizontal slider set to ${state.slider}%`);
+    }
+
+    function onVerticalSlide(percent) {
+      state.vertical = Math.round(percent * 100);
+      setMetric('#verticalMetric', `Vertical ${state.vertical}%`);
+      setStatus(`Vertical slider set to ${state.vertical}%`);
+    }
+
+    function onVerticalHover(percent) {
+      setMetric('#hoverMetric', `Hover ${Math.round(percent * 100)}%`);
+    }
+
+    function formatPercent(percent) {
+      return `${Math.round(percent * 100)}%`;
+    }
+
+    function cycleProgress() {
+      state.progress = state.progress >= 0.95 ? 0.12 : state.progress + 0.08;
+      const loader = document.querySelector('#circleLoader');
+      if (loader) {
+        loader.setAttribute('loaded', state.progress.toFixed(2));
+      }
+      setMetric('#progressMetric', `Progress ${Math.round(state.progress * 100)}%`);
+      setStatus('Circle loader value updated');
+    }
+
+    function tickTimer() {
+      state.timer = state.timer <= 0 ? 12 : state.timer - 1;
+      const timer = document.querySelector('#circleTimer');
+      if (timer) {
+        timer.setAttribute('count-down', state.timer);
+      }
+      setMetric('#timerMetric', `Timer ${state.timer}s`);
+    }
+
+    window.onPrimaryClick = onPrimaryClick;
+    window.onBevelClick = onBevelClick;
+    window.onIconClick = onIconClick;
+    window.onIconLabelClick = onIconLabelClick;
+    window.onToggle = onToggle;
+    window.onRadioComfort = onRadioComfort;
+    window.onRadioFocus = onRadioFocus;
+    window.onInputClick = onInputClick;
+    window.onSlide = onSlide;
+    window.onVerticalSlide = onVerticalSlide;
+    window.onVerticalHover = onVerticalHover;
+    window.formatPercent = formatPercent;
+    window.cycleProgress = cycleProgress;
+
+    window.addEventListener('load', function () {
+      setInterval(tickTimer, 1000);
+      setInterval(cycleProgress, 2400);
+    });
+  </script>
+</head>
+<body>
+  <a-scene background="color: #161618">
+    <a-assets>
+      <img id="gridTexture" alt="subtle grid" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23161618'/%3E%3Cpath d='M0 24H96M0 48H96M0 72H96M24 0V96M48 0V96M72 0V96' stroke='%231B1B1F' stroke-width='1' opacity='.72'/%3E%3C/svg%3E">
+    </a-assets>
+
+    <a-entity id="rig" position="0 1.6 4.4">
+      <a-camera look-controls wasd-controls>
+        <a-sxr-cursor id="cursor"
+          raycaster="objects: [sxr-interactable]"
+          fuse="false"
+          color="#F1F5F9"
+          hover-color="#0EA5E9"
+          active-color="#2563EB"
+          design="ring"
+          position="0 0 -1">
+        </a-sxr-cursor>
+      </a-camera>
+    </a-entity>
+
+    <!-- <a-entity geometry="primitive: plane; width: 15; height: 8"
+              material="src: #gridTexture; repeat: 8 4; shader: flat; opacity: 0.45; transparent: true"
+              position="0 1.6 -1.1"></a-entity>
+    <a-entity geometry="primitive: ring; radiusInner: 2.9; radiusOuter: 3.05; thetaLength: 300"
+              material="color: #2563EB; shader: flat; opacity: 0.28; transparent: true"
+              position="-4.1 2.8 -0.8" rotation="0 0 -28"></a-entity>
+    <a-entity geometry="primitive: ring; radiusInner: 1.2; radiusOuter: 1.32; thetaLength: 220"
+              material="color: #0EA5E9; shader: flat; opacity: 0.22; transparent: true"
+              position="4.6 0.6 -0.75" rotation="0 0 42"></a-entity> -->
+
+    <a-sxr-flex-container
+      id="heroPanel"
+      flex-direction="column"
+      justify-content="center"
+      align-items="center"
+      opacity=".5"
+      width="3.45"
+      height="4.75"
+      is-top-container="true"
+      panel-color="#ffffff"
+      panel-rounded="0.18"
+      position="-3.7 1.7 0">
+
+      <a-sxr-label width="3.05" height="0.48"
+        value="SenangStart XR"
+        font-color="#ffffff"
+        background-color="#202127"
+        opacity="0"
+        font-size="0.34"
+        text-depth="0.08"
+        text-stroke-width="0"
+        margin="0.03 0 0.04 0"></a-sxr-label>
+
+      <a-sxr-label width="3.05" height="0.62"
+        value="3D GUI primitives for A-Frame: layouts, controls, cursors and WebXR-ready interaction."
+        font-color="#ffffff"
+        background-color="#202127"
+        opacity="0"
+        font-size="0.145"
+        line-height="0.2"
+        text-depth="0.08"
+        text-stroke-width="0"
+        margin="0.02 0 0.08 0"></a-sxr-label>
+
+      <a-sxr-button width="2.8" height="0.54"
+        value="Primary Button"
+        onclick="onPrimaryClick"
+        key-code="13"
+        font-color="#F1F5F9"
+        border-color="#1B1B1F"
+        background-color="#202127"
+        hover-color="#0EA5E9"
+        active-color="#2563EB"
+        margin="0.06 0 0.06 0"></a-sxr-button>
+
+      <a-sxr-button width="2.8" height="0.58"
+        value="Beveled CTA"
+        onclick="onBevelClick"
+        bevel="true"
+        bevel-size="0.04"
+        bevel-thickness="0.12"
+        base-depth="0.04"
+        depth="0.12"
+        gap="0.05"
+        border-color="#0EA5E9"
+        background-color="#2563EB"
+        hover-color="#0EA5E9"
+        active-color="#F1F5F9"
+        font-color="#F1F5F9"
+        margin="0.06 0 0.07 0"></a-sxr-button>
+
+      <a-sxr-input id="demoInput"
+        width="2.8"
+        height="0.5"
+        value="Interactive input"
+        onclick="onInputClick"
+        background-color="#F1F5F9"
+        border-color="#2563EB"
+        border-hover-color="#0EA5E9"
+        hover-color="#F1F5F9"
+        font-color="#161618"
+        font-size="0.16"
+        margin="0.07 0 0.07 0"></a-sxr-input>
+
+      <a-sxr-label id="statusText"
+        width="2.8"
+        height="0.72"
+        value="Aim at widgets and click to update this live status readout."
+        align="left"
+        anchor="left"
+        font-color="#F1F5F9"
+        background-color="#161618"
+        opacity="0.85"
+        font-size="0.135"
+        line-height="0.19"
+        text-depth="0.03"
+        margin="0.08 0 0.02 0"></a-sxr-label>
+    </a-sxr-flex-container>
+
+    <a-sxr-flex-container
+      id="controlsPanel"
+      flex-direction="column"
+      justify-content="center"
+      align-items="center"
+      opacity=".5"
+      width="3.55"
+      height="4.75"
+      is-top-container="true"
+      panel-color="#ffffff"
+      panel-rounded="0.18"
+      position="0 1.7 0">
+
+      <a-sxr-label width="3.1" height="0.38"
+        value="Controls"
+        font-color="#F1F5F9"
+        background-color="#202127"
+        opacity="0"
+        font-size="0.26"
+        margin="0.02 0 0.05 0"></a-sxr-label>
+
+      <a-sxr-flex-container
+        flex-direction="row"
+        justify-content="center"
+        align-items="center"
+        width="3.05"
+        height="0.72"
+        opacity="0"
+        margin="0.04 0 0.06 0">
+
+        <a-sxr-icon-button width="0.58" height="0.58"
+          onclick="onIconClick"
+          icon="cog-6-tooth"
+          icon-font-size="0.32"
+          border-color="#1B1B1F"
+          background-color="#202127"
+          hover-color="#0EA5E9"
+          active-color="#2563EB"
+          margin="0 0.08 0 0"></a-sxr-icon-button>
+
+        <a-sxr-icon-button width="0.58" height="0.58"
+          onclick="onIconClick"
+          icon="play"
+          icon-font-size="0.32"
+          border-color="#1B1B1F"
+          background-color="#202127"
+          hover-color="#0EA5E9"
+          active-color="#2563EB"
+          margin="0 0.08 0 0.08"></a-sxr-icon-button>
+
+        <a-sxr-icon-button width="0.58" height="0.58"
+          onclick="onIconClick"
+          icon="star"
+          icon-font-size="0.32"
+          toggle="true"
+          border-color="#0EA5E9"
+          background-color="#202127"
+          hover-color="#0EA5E9"
+          active-color="#2563EB"
+          margin="0 0 0 0.08"></a-sxr-icon-button>
+      </a-sxr-flex-container>
+
+      <a-sxr-icon-label-button width="2.9" height="0.52"
+        onclick="onIconLabelClick"
+        icon="sparkles"
+        icon-font-size="0.26"
+        value="Icon + Label Button"
+        font-size="0.145"
+        border-color="#0EA5E9"
+        background-color="#202127"
+        hover-color="#0EA5E9"
+        active-color="#2563EB"
+        margin="0.04 0 0.06 0"></a-sxr-icon-label-button>
+
+      <a-sxr-toggle width="2.9" height="0.48"
+        value="Toggle inspect mode"
+        onclick="onToggle"
+        font-size="0.15"
+        background-color="#F1F5F9"
+        border-color="#1B1B1F"
+        hover-color="#0EA5E9"
+        active-color="#2563EB"
+        handle-color="#F1F5F9"
+        margin="0.06 0 0.06 0"></a-sxr-toggle>
+
+      <a-sxr-radio width="2.9" height="0.48"
+        value="Comfort radio option"
+        onclick="onRadioComfort"
+        font-size="0.15"
+        background-color="#F1F5F9"
+        border-color="#1B1B1F"
+        hover-color="#0EA5E9"
+        active-color="#2563EB"
+        margin="0.06 0 0.04 0"></a-sxr-radio>
+
+      <a-sxr-radio width="2.9" height="0.48"
+        value="Focus radio option"
+        onclick="onRadioFocus"
+        font-size="0.15"
+        background-color="#F1F5F9"
+        border-color="#1B1B1F"
+        hover-color="#0EA5E9"
+        active-color="#2563EB"
+        margin="0.04 0 0.07 0"></a-sxr-radio>
+
+      <a-sxr-label id="activityLog"
+        width="2.9"
+        height="0.5"
+        value="Last event: ready"
+        align="left"
+        anchor="left"
+        font-color="#F1F5F9"
+        background-color="#161618"
+        opacity="0.85"
+        font-size="0.13"
+        text-depth="0.03"
+        margin="0.08 0 0.02 0"></a-sxr-label>
+    </a-sxr-flex-container>
+
+    <a-sxr-flex-container
+      id="metersPanel"
+      flex-direction="column"
+      justify-content="flexStart"
+      align-items="center"
+      opacity=".5"
+      width="3.65"
+      height="4.75"
+      is-top-container="true"
+      panel-color="#ffffff"
+      panel-rounded="0.18"
+      position="3.75 1.7 0">
+
+      <a-sxr-label width="3.15" height="0.5"
+        value="Meters + Sliders"
+        font-color="#F1F5F9"
+        background-color="#202127"
+        opacity="0"
+        font-size="0.25"
+        margin="0 0 0 0"></a-sxr-label>
+
+      <a-sxr-flex-container
+        flex-direction="row"
+        justify-content="center"
+        align-items="center"
+        width="3.15"
+        height="0.98"
+        opacity="0"
+        margin="0.02 0 0.02 0">
+
+        <a-sxr-circle-loader id="circleLoader"
+          width="0.86"
+          height="0.86"
+          loaded="0.75"
+          active-color="#2563EB"
+          background-color="#161618"
+          font-color="#F1F5F9"
+          font-size="0.2"
+          margin="0 0.12 0 0"></a-sxr-circle-loader>
+
+        <a-sxr-circle-timer id="circleTimer"
+          width="0.86"
+          height="0.86"
+          count-down="12"
+          active-color="#0EA5E9"
+          border-color="#1B1B1F"
+          background-color="#161618"
+          font-color="#F1F5F9"
+          font-size="0.22"
+          margin="0 0.18 0 0.12"></a-sxr-circle-timer>
+
+        <a-sxr-progressbar
+          width="0.78"
+          height="0.2"
+          background-color="#161618"
+          active-color="#2563EB"
+          percent="0.5"
+          margin="0 0 0 0.08"></a-sxr-progressbar>
+      </a-sxr-flex-container>
+
+      <a-sxr-slider width="2.95" height="0.42"
+        percent="0.5"
+        onclick="onSlide"
+        background-color="#F1F5F9"
+        border-color="#1B1B1F"
+        active-color="#2563EB"
+        handle-color="#F1F5F9"
+        hover-color="#0EA5E9"
+        margin="0 0 0 0"></a-sxr-slider>
+
+      <a-sxr-flex-container
+        flex-direction="row"
+        justify-content="center"
+        align-items="flexStart"
+        width="3.0"
+        height="1.36"
+        opacity="0"
+        margin="0.04 0 0.06 0">
+
+        <a-sxr-vertical-slider width="0.66" height="1.24"
+          percent="0.68"
+          onclick="onVerticalSlide"
+          onhover="onVerticalHover"
+          output-function="formatPercent"
+          active-color="#2563EB"
+          background-color="#161618"
+          border-color="#1B1B1F"
+          handle-color="#F1F5F9"
+          hover-color="#0EA5E9"
+          opacity="0.9"
+          margin="0.02 0.16 0 0"></a-sxr-vertical-slider>
+
+        <a-sxr-flex-container
+          flex-direction="column"
+          justify-content="flexStart"
+          align-items="flexStart"
+          width="2.12"
+          height="1.24"
+          opacity="0"
+          margin="0.02 0 0 0.16">
+
+          <a-sxr-label id="clickMetric" width="2.0" height="0.19"
+            value="Clicks 0"
+            align="left"
+            anchor="left"
+            font-color="#F1F5F9"
+            background-color="#202127"
+            opacity="0"
+            font-size="0.105"
+            margin="0 0 0.015 0.04"></a-sxr-label>
+
+          <a-sxr-label id="modeMetric" width="2.0" height="0.19"
+            value="Mode Orbit"
+            align="left"
+            anchor="left"
+            font-color="#F1F5F9"
+            background-color="#202127"
+            opacity="0"
+            font-size="0.105"
+            margin="0.015 0 0.015 0.04"></a-sxr-label>
+
+          <a-sxr-label id="radioMetric" width="2.0" height="0.19"
+            value="Radio awaiting"
+            align="left"
+            anchor="left"
+            font-color="#F1F5F9"
+            background-color="#202127"
+            opacity="0"
+            font-size="0.105"
+            margin="0.015 0 0.015 0.04"></a-sxr-label>
+
+          <a-sxr-label id="sliderMetric" width="2.0" height="0.19"
+            value="Horizontal 42%"
+            align="left"
+            anchor="left"
+            font-color="#F1F5F9"
+            background-color="#202127"
+            opacity="0"
+            font-size="0.105"
+            margin="0.015 0 0.015 0.04"></a-sxr-label>
+
+          <a-sxr-label id="verticalMetric" width="2.0" height="0.19"
+            value="Vertical 68%"
+            align="left"
+            anchor="left"
+            font-color="#F1F5F9"
+            background-color="#202127"
+            opacity="0"
+            font-size="0.105"
+            margin="0.015 0 0.015 0.04"></a-sxr-label>
+
+          <a-sxr-label id="hoverMetric" width="2.0" height="0.19"
+            value="Hover --"
+            align="left"
+            anchor="left"
+            font-color="#F1F5F9"
+            background-color="#202127"
+            opacity="0"
+            font-size="0.105"
+            margin="0.015 0 0 0.04"></a-sxr-label>
+        </a-sxr-flex-container>
+      </a-sxr-flex-container>
+
+      <a-sxr-flex-container
+        flex-direction="row"
+        justify-content="center"
+        align-items="center"
+        width="3.0"
+        height="0.38"
+        opacity="0"
+        margin="0.07 0 0.08 0">
+
+        <a-sxr-label id="progressMetric" width="1.42" height="0.24"
+          value="Progress 64%"
+          align="left"
+          anchor="left"
+          font-color="#F1F5F9"
+          background-color="#202127"
+          opacity="0"
+          font-size="0.11"
+          margin="0 0.08 0 0"></a-sxr-label>
+
+        <a-sxr-label id="timerMetric" width="1.42" height="0.24"
+          value="Timer 12s"
+          align="left"
+          anchor="left"
+          font-color="#F1F5F9"
+          background-color="#202127"
+          opacity="0"
+          font-size="0.11"
+          margin="0 0 0 0.08"></a-sxr-label>
+      </a-sxr-flex-container>
+    </a-sxr-flex-container>
+
+    <!-- <a-entity position="0 -0.82 0.05">
+      <a-sxr-cursor fuse="false" design="dot" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0"></a-sxr-cursor>
+      <a-sxr-cursor fuse="false" design="ring" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0" position="0.42 0 0"></a-sxr-cursor>
+      <a-sxr-cursor fuse="false" design="cross" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0" position="0.84 0 0"></a-sxr-cursor>
+      <a-sxr-cursor fuse="false" design="reticle" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0" position="1.26 0 0"></a-sxr-cursor>
+      <a-sxr-label width="1.75" height="0.26"
+        value="Cursor styles"
+        align="left"
+        anchor="left"
+        font-color="#F1F5F9"
+        background-color="#161618"
+        opacity="0"
+        font-size="0.11"
+        position="-1.4 0 0.01"></a-sxr-label>
+    </a-entity> -->
+
+    <a-entity light="type: ambient; intensity: 0.9"></a-entity>
+    <a-entity light="type: directional; intensity: 0.75" position="2 4 3"></a-entity>
+    <a-entity light="type: point; intensity: 0.55; color: #2563EB" position="-3 2.8 1.5"></a-entity>
+  </a-scene>
+</body>
+</html>
