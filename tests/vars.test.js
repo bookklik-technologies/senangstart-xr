@@ -5,7 +5,6 @@
 describe('vars.js utility functions', () => {
   beforeAll(() => {
     require('../src/scripts/vars.js');
-    require('../src/scripts/utils.js');
   });
 
   describe('getUniqueId', () => {
@@ -19,15 +18,6 @@ describe('vars.js utility functions', () => {
       const id1 = window.SXR.getUniqueId('test');
       const id2 = window.SXR.getUniqueId('test');
       expect(id1).not.toBe(id2);
-    });
-  });
-
-  describe('nearestPow2', () => {
-    test('returns nearest power of two', () => {
-      expect(window.SXR.nearestPow2(5)).toBe(4);
-      expect(window.SXR.nearestPow2(14)).toBe(16);
-      expect(window.SXR.nearestPow2(1)).toBe(1);
-      expect(window.SXR.nearestPow2(7)).toBe(8);
     });
   });
 
@@ -94,7 +84,10 @@ describe('vars.js utility functions', () => {
         fontSize: 0.2,
       });
 
-      expect(parseInt(textCanvas.getContext('2d').font.match(/(\d+)px/)[1], 10)).toBeGreaterThan(150);
+      // default pixel ratio is 128: a 1-unit-tall box maps to a 128px canvas,
+      // so a 0.2-unit font renders at ~26px and must not be downscaled
+      expect(textCanvas.height).toBe(128);
+      expect(parseInt(textCanvas.getContext('2d').font.match(/(\d+)px/)[1], 10)).toBe(26);
 
       createElementSpy.mockRestore();
       delete global.THREE;

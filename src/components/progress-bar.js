@@ -17,7 +17,6 @@ AFRAME.registerComponent('sxr-progressbar', {
 
         const progressMeter = document.createElement("a-entity");
         progressMeter.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.activeColor}`);
-        progressMeter.id = "progress_meter";
         el.appendChild(progressMeter);
 
         this.guiItem = guiItem;

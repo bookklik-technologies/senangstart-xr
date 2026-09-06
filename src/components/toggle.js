@@ -24,7 +24,6 @@ AFRAME.registerComponent('sxr-toggle', {
         const el = this.el;
         const guiItem = el.getAttribute("sxr-item");
         this.guiItem = guiItem;
-        this.checkedState = data.checked;
         this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
         const guiInteractable = el.getAttribute("sxr-interactable");
         this.guiInteractable = guiInteractable;
@@ -45,79 +44,101 @@ AFRAME.registerComponent('sxr-toggle', {
         });
         toggleTrack.setAttribute('position', `${toggleTrackX} 0 0.01`);
         el.appendChild(toggleTrack);
+        this.toggleTrack = toggleTrack;
 
         const toggleHandleRadius = toggleTrackHeight*0.4;
         const toggleHandleInset = toggleTrackHeight*0.1;
-        const toggleHandleXStart = -toggleTrackWidth/2 + toggleHandleRadius + toggleHandleInset;
-        const toggleHandleXEnd = toggleTrackWidth/2 - toggleHandleRadius - toggleHandleInset;
+        this.toggleHandleXStart = -toggleTrackWidth/2 + toggleHandleRadius + toggleHandleInset;
+        this.toggleHandleXEnd = toggleTrackWidth/2 - toggleHandleRadius - toggleHandleInset;
         const toggleHandle = document.createElement("a-circle");
 
         toggleHandle.setAttribute('geometry', `primitive: circle; radius: ${toggleHandleRadius}; segments: 32;`);
         toggleHandle.setAttribute('material', `color:${data.handleColor}; shader: flat;`);
-        toggleHandle.setAttribute('position', `${data.checked ? toggleHandleXEnd : toggleHandleXStart} 0 0.02`);
+        toggleHandle.setAttribute('position', `${data.checked ? this.toggleHandleXEnd : this.toggleHandleXStart} 0 0.02`);
         toggleTrack.appendChild(toggleHandle);
+        this.toggleHandle = toggleHandle;
 
         this.setText(data.value);
 
         this.updateToggle(data.active);
 
-
-        el.addEventListener('mouseenter', function() {
+        this._onMouseEnter = function() {
             toggleHandle.removeAttribute('animation__leave');
             toggleHandle.setAttribute('animation__enter', `property: material.color; from: ${data.handleColor}; to:${data.hoverColor}; dur:200;`);
-        });
-        el.addEventListener('mouseleave', function() {
+        };
+        el.addEventListener('mouseenter', this._onMouseEnter);
+        this._onMouseLeave = function() {
             toggleHandle.removeAttribute('animation__enter');
             toggleHandle.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.handleColor}; dur:200; easing: easeOutQuad;`);
-        });
+        };
+        el.addEventListener('mouseleave', this._onMouseLeave);
 
-        el.addEventListener("check", function () {
-            if(!data.checked){
-                data.checked = true;
-            }
-        });
-        el.addEventListener("uncheck", function () {
-              if(data.checked){
-                data.checked = false;
-              }
-        });
+        this._onCheck = function () {
+            el.setAttribute('sxr-toggle', 'checked', 'true');
+        };
+        el.addEventListener("check", this._onCheck);
+        this._onUncheck = function () {
+            el.setAttribute('sxr-toggle', 'checked', 'false');
+        };
+        el.addEventListener("uncheck", this._onUncheck);
 
-        el.addEventListener(data.on, function (evt) {
-            data.checked = !data.checked;
-            if(data.checked){
-                toggleTrack.removeAttribute('animation__colorOut');
-                toggleHandle.removeAttribute('animation__positionOut');
-                toggleTrack.setAttribute('animation__colorIn', `property: rounded.color; from: ${data.borderColor}; to:${data.activeColor}; dur:200; easing:easeInOutCubic;`);
-                toggleHandle.setAttribute('animation__positionIn', `property: position; from: ${toggleHandleXStart} 0 0.02; to:${toggleHandleXEnd} 0 0.02; dur:200; easing:easeInOutCubic;`);
-            }else{
-                toggleTrack.removeAttribute('animation__colorIn');
-                toggleHandle.removeAttribute('animation__positionIn');
-                toggleTrack.setAttribute('animation__colorOut', `property: rounded.color; from: ${data.activeColor}; to:${data.borderColor}; dur:200; easing:easeInOutCubic;`);
-                toggleHandle.setAttribute('animation__positionOut', `property: position; from: ${toggleHandleXEnd} 0 0.02; to:${toggleHandleXStart} 0 0.02; dur:200; easing:easeInOutCubic;`);
-            }
-            const guiInteractable = el.getAttribute("sxr-interactable");
-            const clickActionFunctionName = guiInteractable.clickAction;
-            // find object
-            const clickActionFunction = window[clickActionFunctionName];
-            // is object a function?
-            if (typeof clickActionFunction === "function") clickActionFunction(evt);
-});
+        this._onActivate = function (evt) {
+            el.setAttribute('sxr-toggle', 'checked', String(!data.checked));
+            const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
+            if (clickActionFunction) clickActionFunction(evt);
+        };
+        el.addEventListener(data.on, this._onActivate);
+
+        ////WAI ARIA Support
+        el.setAttribute('role', 'switch');
+        el.setAttribute('tabindex', '0');
 
     },
-    update: function(){
+    update: function (oldData) {
         const data = this.data;
-        this.updateToggle(data.active)
+        const hasOldData = oldData && Object.keys(oldData).length > 0;
 
-        if(this.textEntity){
+        if (hasOldData && data.checked !== oldData.checked && this.toggleTrack && this.toggleHandle) {
+            this.applyCheckedVisuals(data.checked);
+        }
+        this.updateToggle(data.active);
 
+        if (hasOldData && data.value !== oldData.value && this.textEntity) {
             SXR.removeEntity(this.textEntity);
-
-            this.setText(this.data.value);
-
+            this.setText(data.value);
         }
 
     },
 
+    remove: function () {
+        const el = this.el;
+        el.removeEventListener('mouseenter', this._onMouseEnter);
+        el.removeEventListener('mouseleave', this._onMouseLeave);
+        el.removeEventListener('check', this._onCheck);
+        el.removeEventListener('uncheck', this._onUncheck);
+        el.removeEventListener(this.data.on, this._onActivate);
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
+    },
+
+    applyCheckedVisuals: function (checked) {
+        const data = this.data;
+        const toggleTrack = this.toggleTrack;
+        const toggleHandle = this.toggleHandle;
+        if (checked) {
+            toggleTrack.removeAttribute('animation__colorOut');
+            toggleHandle.removeAttribute('animation__positionOut');
+            toggleTrack.setAttribute('animation__colorIn', `property: rounded.color; from: ${data.borderColor}; to:${data.activeColor}; dur:200; easing:easeInOutCubic;`);
+            toggleHandle.setAttribute('animation__positionIn', `property: position; from: ${this.toggleHandleXStart} 0 0.02; to:${this.toggleHandleXEnd} 0 0.02; dur:200; easing:easeInOutCubic;`);
+        }else{
+            toggleTrack.removeAttribute('animation__colorIn');
+            toggleHandle.removeAttribute('animation__positionIn');
+            toggleTrack.setAttribute('animation__colorOut', `property: rounded.color; from: ${data.activeColor}; to:${data.borderColor}; dur:200; easing:easeInOutCubic;`);
+            toggleHandle.setAttribute('animation__positionOut', `property: position; from: ${this.toggleHandleXEnd} 0 0.02; to:${this.toggleHandleXStart} 0 0.02; dur:200; easing:easeInOutCubic;`);
+        }
+    },
 
     updateToggle: function(active){
         this.el.setAttribute('aria-disabled', (!active).toString());
@@ -126,7 +147,7 @@ AFRAME.registerComponent('sxr-toggle', {
     setText: function (newText) {
         const textEntityX = this.guiItem.height  - this.guiItem.width*0.5;
         const textWidth = Math.max(0.1, this.guiItem.width - this.guiItem.height - 0.08);
-        const textEntity = SXR.createTextEntity({
+        const options = {
             value: newText,
             width: textWidth,
             height: this.guiItem.height * 0.72,
@@ -134,7 +155,10 @@ AFRAME.registerComponent('sxr-toggle', {
             fontFamily: this.data.fontFamily,
             color: this.data.fontColor,
             align: 'left'
-        });
+        };
+        if (this.textEntity && SXR.redrawTextEntity(this.textEntity, options)) { return; }
+        if (this.textEntity) { SXR.removeEntity(this.textEntity); }
+        const textEntity = SXR.createTextEntity(options);
         this.textEntity = textEntity;
         textEntity.setAttribute('position', `${textEntityX + textWidth / 2} 0 0.05`);
         this.el.appendChild(textEntity);
@@ -166,6 +190,8 @@ AFRAME.registerPrimitive( 'a-sxr-toggle', {
         'background-color': 'sxr-toggle.backgroundColor',
         'hover-color': 'sxr-toggle.hoverColor',
         'active-color': 'sxr-toggle.activeColor',
-        'handle-color': 'sxr-toggle.handleColor'
+        'handle-color': 'sxr-toggle.handleColor',
+        'toggle': 'sxr-toggle.toggle',
+        'toggle-state': 'sxr-toggle.toggleState'
     }
 });

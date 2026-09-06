@@ -17,10 +17,23 @@ AFRAME.registerComponent('sxr-cursor', {
         const data = this.data;
         const component = this;
         const defaultHoverAnimationDuration = 200;
-        const fuseAnimationDuration = fuseTimeout - defaultHoverAnimationDuration;
+        const fuseAnimationDuration = Math.max(0, fuseTimeout - defaultHoverAnimationDuration);
 
-        AFRAME.utils.entity.setComponentProperty(el, 'raycaster.interval', '500');
-        
+        // the fuse loader is an appended child whose animation component may
+        // not be initialized yet; walk the chain defensively
+        const getFuseAnimation = function () {
+            const fuseLoader = component.fuseLoader;
+            if (!fuseLoader || !fuseLoader.object3D || !fuseLoader.object3D.el) { return null; }
+            const animationComponent = fuseLoader.object3D.el.components && fuseLoader.object3D.el.components.animation;
+            return (animationComponent && animationComponent.animation) ? animationComponent.animation : null;
+        };
+        const pauseFuseAnimation = function () {
+            const animation = getFuseAnimation();
+            if (animation) {
+                animation.pause();
+                animation.seek(0);
+            }
+        };
 
         if(data.design === 'dot'){    
 
@@ -268,7 +281,7 @@ AFRAME.registerComponent('sxr-cursor', {
             //end cross design        
         }
 
-        el.addEventListener('mouseenter', function () {
+        this._onMouseEnter = function () {
             el.emit('hovergui');
             if (data.design === 'dot' || data.design === 'ring') {
                 component.cursorShadow.emit('hovergui');
@@ -283,13 +296,16 @@ AFRAME.registerComponent('sxr-cursor', {
                 component.cursorShadow.emit('hovergui');
             }
 
-        });
+        };
 
-        el.addEventListener('mouseleave', function () {
+        el.addEventListener('mouseenter', this._onMouseEnter);
+
+        this._onMouseLeave = function () {
             el.emit('leavegui');
             if (data.design === 'dot' || data.design === 'ring') {
                 component.cursorShadow.emit('leavegui');
             }else if (data.design === 'cross') {
+                component.cursorShadow.emit('leavegui');
                 component.cursorVerticalTop.emit('leavegui');
                 component.cursorVerticalBottom.emit('leavegui');
                 component.cursorHorizontalLeft.emit('leavegui');
@@ -300,31 +316,32 @@ AFRAME.registerComponent('sxr-cursor', {
             }
 
             if(fuse){
-                component.fuseLoader.object3D.el.components.animation.animation.pause();
-                component.fuseLoader.object3D.el.components.animation.animation.seek(0);
+                pauseFuseAnimation();
             }
 
             el.setAttribute('scale', '1 1 1');
-        });
+        };
+
+        el.addEventListener('mouseleave', this._onMouseLeave);
 
         if(fuse){
-            el.addEventListener('fusing', function () {
-                component.fuseLoader.object3D.el.components.animation.animation.play();
-            });
+            this._onFusing = function () {
+                const animation = getFuseAnimation();
+                if (animation) { animation.play(); }
+            };
+            el.addEventListener('fusing', this._onFusing);
         }
 
-        el.addEventListener("stateremoved", function (evt) {
+        this._onStateRemoved = function (evt) {
             if (evt.detail.state === 'cursor-fusing' || evt.detail === 'cursor-fusing') {
                 if(data.design === 'dot' || data.design === 'ring' || data.design === 'cross' ){  
                     if(fuse){
-                        component.fuseLoader.object3D.el.components.animation.animation.pause();
-                        component.fuseLoader.object3D.el.components.animation.animation.seek(0);
+                        pauseFuseAnimation();
                         AFRAME.utils.entity.setComponentProperty(component.fuseLoader, 'geometry.thetaLength', '0');
                     }
                 }else if(data.design === 'reticle'){
                     if(fuse){
-                        component.fuseLoader.object3D.el.components.animation.animation.pause();
-                        component.fuseLoader.object3D.el.components.animation.animation.seek(0);
+                        pauseFuseAnimation();
                         AFRAME.utils.entity.setComponentProperty(component.fuseLoader, 'geometry.width', '0.000001');
                     }                    
                 }
@@ -344,15 +361,30 @@ AFRAME.registerComponent('sxr-cursor', {
                     }
                 }
             }
-        });
+        };
+
+        el.addEventListener("stateremoved", this._onStateRemoved);
 
 
+    },
+    remove: function () {
+        const el = this.el;
+        el.removeEventListener('mouseenter', this._onMouseEnter);
+        el.removeEventListener('mouseleave', this._onMouseLeave);
+        el.removeEventListener('stateremoved', this._onStateRemoved);
+        if (this._onFusing) {
+            el.removeEventListener('fusing', this._onFusing);
+        }
     },
 });
 
 AFRAME.registerPrimitive( 'a-sxr-cursor', {
     defaultComponents: {
         'cursor': {},
+        // scoped raycaster: only sxr-interactable entities are tested,
+        // keeping raycasts cheap in widget-heavy scenes. Scene authors can
+        // still override via a raycaster attribute on the element.
+        'raycaster': {objects: '[sxr-interactable]', interval: 100},
         'sxr-cursor': { }
     },
     mappings: {

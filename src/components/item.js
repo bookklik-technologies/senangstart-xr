@@ -1,6 +1,8 @@
+'use strict';
+
 AFRAME.registerComponent('sxr-item', {
     schema: {
-        type: {type: 'string'},
+        type: {type: 'string', default: ''},
         width: {type: 'number', default: 1},
         height: {type: 'number', default: 1},
         baseDepth: {type: 'number', default: 0.01},

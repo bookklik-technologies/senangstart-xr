@@ -36,24 +36,29 @@ AFRAME.registerComponent('sxr-circle-loader', {
         loaderRing.setAttribute('theta-length', `${Math.abs(data.loaded) * 360}`);
         loaderRing.setAttribute('rotation', '0 0 0');
         loaderRing.setAttribute('position', '0 0 0.04');
-        loaderRing.id = "loader_ring";
         el.appendChild(loaderRing);
+        this.loaderRing = loaderRing;
 
         this.setText(data.loaded);
 
 
     },
     update: function (_oldData) {
-        if(this.textEntity){
-
-            SXR.removeEntity(this.textEntity);
-
+        if (this.loaderRing) {
+            this.loaderRing.setAttribute('theta-length', `${Math.abs(this.data.loaded) * 360}`);
+        }
+        if (this.textEntity) {
             this.setText(this.data.loaded);
-   
-        }       
+        }
+    },
+    remove: function () {
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
     },
     setText: function (newLoaded) {
-        const textEntity = SXR.createTextEntity({
+        const options = {
             value: Math.round(newLoaded * 100),
             width: this.guiItem.height * 0.7,
             height: this.guiItem.height * 0.38,
@@ -61,7 +66,10 @@ AFRAME.registerComponent('sxr-circle-loader', {
             fontFamily: this.data.fontFamily,
             color: this.data.fontColor,
             align: 'center'
-        });
+        };
+        if (this.textEntity && SXR.redrawTextEntity(this.textEntity, options)) { return; }
+        if (this.textEntity) { SXR.removeEntity(this.textEntity); }
+        const textEntity = SXR.createTextEntity(options);
         this.textEntity = textEntity;
         textEntity.setAttribute('position', '0 0 0.05');
         this.el.appendChild(textEntity);

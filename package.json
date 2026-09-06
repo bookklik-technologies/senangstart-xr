@@ -1,14 +1,35 @@
 {
   "name": "senangstart-xr",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "SenangStart XR - 3D GUI components for A-Frame / WebXR",
   "author": "SenangStart XR",
   "license": "MIT",
-  "main": "src/index.js",
+  "main": "dist/senangstart-xr.min.js",
+  "exports": {
+    ".": "./dist/senangstart-xr.min.js",
+    "./src/*": "./src/*"
+  },
+  "unpkg": "dist/senangstart-xr.min.js",
+  "jsdelivr": "dist/senangstart-xr.min.js",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bookklik-technologies/senangstart-xr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bookklik-technologies/senangstart-xr/issues"
+  },
+  "homepage": "https://github.com/bookklik-technologies/senangstart-xr#readme",
   "scripts": {
     "dist": "webpack",
     "dist-min": "webpack --env mode=production",
-    "dist-example": "webpack --env output=example",
+    "dist-dev": "webpack --env mode=development",
+    "dist-example": "webpack --env output=example mode=development",
     "dist-example-min": "webpack --env output=example mode=production",
     "start": "webpack serve",
     "lint": "eslint src/",

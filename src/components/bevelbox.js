@@ -27,50 +27,12 @@ AFRAME.registerComponent('bevelbox', {
   multiple: false,
   
   init: function() {      
-    const el = this.el;
-    const data = this.data;
-    
-    const _w = data.width;
-    const _h = data.height;
-    const _x = -data.width / 2;
-    const _y = -data.height / 2;
-    
-    const shape = new THREE.Shape();      
-    shape.moveTo( _x, _y + data.topLeftRadius );
-    shape.lineTo( _x, _y + _h - data.topLeftRadius );
-    shape.quadraticCurveTo( _x, _y + _h, _x + data.topLeftRadius, _y + _h );
-    shape.lineTo( _x + _w - data.topRightRadius, _y + _h );
-    shape.quadraticCurveTo( _x + _w, _y + _h, _x + _w, _y + _h - data.topRightRadius );
-    shape.lineTo( _x + _w, _y + data.bottomRightRadius );
-    shape.quadraticCurveTo( _x + _w, _y, _x + _w - data.bottomRightRadius, _y );
-    shape.lineTo( _x + data.bottomLeftRadius, _y );
-    shape.quadraticCurveTo( _x, _y, _x, _y + data.bottomLeftRadius );
-
-    const extrudedShape = this.extrude(shape);
-    
-    el.setObject3D('mesh', extrudedShape);            
+    this.el.setObject3D('mesh', this.extrude(this.buildShape()));            
   },
   update: function () {
     const el = this.el;
-    const data = this.data;
-    
-    const _w = data.width;
-    const _h = data.height;
-    const _x = -data.width / 2;
-    const _y = -data.height / 2;
-    
-    const shape = new THREE.Shape();      
-    shape.moveTo( _x, _y + data.topLeftRadius );
-    shape.lineTo( _x, _y + _h - data.topLeftRadius );
-    shape.quadraticCurveTo( _x, _y + _h, _x + data.topLeftRadius, _y + _h );
-    shape.lineTo( _x + _w - data.topRightRadius, _y + _h );
-    shape.quadraticCurveTo( _x + _w, _y + _h, _x + _w, _y + _h - data.topRightRadius );
-    shape.lineTo( _x + _w, _y + data.bottomRightRadius );
-    shape.quadraticCurveTo( _x + _w, _y, _x + _w - data.bottomRightRadius, _y );
-    shape.lineTo( _x + data.bottomLeftRadius, _y );
-    shape.quadraticCurveTo( _x, _y, _x, _y + data.bottomLeftRadius );
 
-    const extrudedShape = this.extrude(shape);
+    const extrudedShape = this.extrude(this.buildShape());
 
     if (this.el.getObject3D('mesh')) {
       const oldMesh = this.el.getObject3D('mesh');
@@ -79,6 +41,36 @@ AFRAME.registerComponent('bevelbox', {
       this.el.removeObject3D('mesh');
     }
     el.setObject3D('mesh', extrudedShape);
+  },
+
+  remove: function () {
+    const mesh = this.el.getObject3D('mesh');
+    if (mesh) {
+      if (mesh.geometry) { mesh.geometry.dispose(); }
+      if (mesh.material) { mesh.material.dispose(); }
+      this.el.removeObject3D('mesh');
+    }
+  },
+
+  buildShape: function () {
+    const data = this.data;
+
+    const _w = data.width;
+    const _h = data.height;
+    const _x = -data.width / 2;
+    const _y = -data.height / 2;
+
+    const shape = new THREE.Shape();      
+    shape.moveTo( _x, _y + data.topLeftRadius );
+    shape.lineTo( _x, _y + _h - data.topLeftRadius );
+    shape.quadraticCurveTo( _x, _y + _h, _x + data.topLeftRadius, _y + _h );
+    shape.lineTo( _x + _w - data.topRightRadius, _y + _h );
+    shape.quadraticCurveTo( _x + _w, _y + _h, _x + _w, _y + _h - data.topRightRadius );
+    shape.lineTo( _x + _w, _y + data.bottomRightRadius );
+    shape.quadraticCurveTo( _x + _w, _y, _x + _w - data.bottomRightRadius, _y );
+    shape.lineTo( _x + data.bottomLeftRadius, _y );
+    shape.quadraticCurveTo( _x, _y, _x, _y + data.bottomLeftRadius );
+    return shape;
   },
     
   extrude: function (roundedBase) {

@@ -2,7 +2,8 @@ const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = (env = {}) => {
-  const isProduction = env.mode === 'production';
+  // production by default; opt out with --env mode=development
+  const isProduction = env.mode !== 'development';
   const isExample = env.output === 'example';
 
   const outputPath = isExample

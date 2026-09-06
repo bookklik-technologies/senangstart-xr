@@ -22,12 +22,25 @@ AFRAME.registerComponent('rounded', {
     this.updateOpacity();
     this.el.setObject3D('mesh', this.rounded);
   },
-  update: function () {
+  update: function (oldData) {
     if (this.data.enabled) {
       if (this.rounded) {
         this.rounded.visible = true;
-        this.rounded.geometry = this.draw();
-        this.rounded.material.color = new THREE.Color(this.data.color);
+        // rebuild the tessellated shape only when its dimensions changed
+        const shapeChanged = !oldData || Object.keys(oldData).length === 0 || (
+          oldData.width !== this.data.width ||
+          oldData.height !== this.data.height ||
+          oldData.radius !== this.data.radius ||
+          oldData.topLeftRadius !== this.data.topLeftRadius ||
+          oldData.topRightRadius !== this.data.topRightRadius ||
+          oldData.bottomLeftRadius !== this.data.bottomLeftRadius ||
+          oldData.bottomRightRadius !== this.data.bottomRightRadius
+        );
+        if (shapeChanged) {
+          if (this.rounded.geometry) { this.rounded.geometry.dispose(); }
+          this.rounded.geometry = this.draw();
+        }
+        this.rounded.material.color.set(this.data.color);
         this.updateOpacity();
         this.updateRenderState();
       }
@@ -35,13 +48,12 @@ AFRAME.registerComponent('rounded', {
       this.rounded.visible = false;
     }
   },
-  updateOpacity: function() {    
-    if (this.data.opacity < 0) { this.data.opacity = 0; }
-    if (this.data.opacity > 1) { this.data.opacity = 1; }
-    if (this.data.opacity < 1) {
+  updateOpacity: function() {
+    const opacity = Math.max(0, Math.min(1, this.data.opacity));
+    if (opacity < 1) {
       this.rounded.material.transparent = true;
-      this.rounded.material.opacity = this.data.opacity;
-      this.rounded.material.alphaTest = 0;     
+      this.rounded.material.opacity = opacity;
+      this.rounded.material.alphaTest = 0;
     } else {
       this.rounded.material.transparent = false;
     }
@@ -55,7 +67,9 @@ AFRAME.registerComponent('rounded', {
   },
   remove: function () {
     if (!this.rounded) { return; }
-    this.el.object3D.remove( this.rounded );
+    this.el.removeObject3D('mesh');
+    if (this.rounded.geometry) { this.rounded.geometry.dispose(); }
+    if (this.rounded.material) { this.rounded.material.dispose(); }
     this.rounded = null;
   },
   draw: function() {

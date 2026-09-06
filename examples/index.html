@@ -5,7 +5,7 @@
   <title>SenangStart XR - Component Showcase</title>
   <meta name="description" content="A complete SenangStart XR component showcase for A-Frame and WebXR">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="js/senangstart-xr.js?v=20260606-slider-width-fix"></script>
+  <script src="js/senangstart-xr.js?v=20260906-text-redraw-fix"></script>
   <script>
     const DEMO_FONT = '../Outfit-Regular.ttf';
 
@@ -126,12 +126,20 @@
     }
 
     function tickTimer() {
-      state.timer = state.timer <= 0 ? 12 : state.timer - 1;
       const timer = document.querySelector('#circleTimer');
-      if (timer) {
-        timer.setAttribute('count-down', state.timer);
+      const component = timer && timer.components && timer.components['sxr-circle-timer'];
+      if (!component) {
+        return;
       }
+      // The component owns the countdown; changing count-down restarts its ring.
+      state.timer = component._lastSecond === null ? component.data.countDown : component._lastSecond;
       setMetric('#timerMetric', `Timer ${state.timer}s`);
+      if (component._finished) {
+        const duration = component.data.countDown;
+        // Reset only after a full cycle. Reapplying an unchanged duration is a no-op.
+        timer.setAttribute('count-down', 0);
+        timer.setAttribute('count-down', duration);
+      }
     }
 
     window.onPrimaryClick = onPrimaryClick;
@@ -448,7 +456,7 @@
           height="0.2"
           background-color="#161618"
           active-color="#2563EB"
-          percent="0.5"
+          percent="0.8"
           margin="0 0 0 0.08"></a-sxr-progressbar>
       </a-sxr-flex-container>
 

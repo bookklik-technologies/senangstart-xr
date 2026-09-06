@@ -3,7 +3,12 @@
     [
       "@babel/preset-env",
       {
-        "targets": "> 0.5%, last 2 versions, not dead",
+        "targets": {
+          "chrome": "89",
+          "edge": "89",
+          "firefox": "90",
+          "safari": "13.1"
+        },
         "modules": false
       }
     ]

@@ -25,7 +25,7 @@ AFRAME.registerComponent('sxr-slider', {
         const sliderWidth = guiItem.width - data.leftRightPadding*2.0
         this.sliderWidth = sliderWidth;
 
-        el.setAttribute('geometry', `primitive: plane; height: ${guiItem.height}; width: ${guiItem.height};`);
+        el.setAttribute('geometry', `primitive: plane; height: ${guiItem.height}; width: ${guiItem.width};`);
         el.setAttribute('material', `shader: flat; opacity: 1;  color: ${data.backgroundColor}; side:front;`);
 
         const sliderActiveBar = document.createElement("a-entity");
@@ -61,18 +61,23 @@ AFRAME.registerComponent('sxr-slider', {
             sliderBar.setAttribute('position', `${handleX + inactiveWidth / 2} 0 ${data.sliderBarDepth - 0.01}`);
             handleContainer.setAttribute('position', `${handleX} 0 ${data.handleOuterDepth - 0.01}`);
         };
+        this._updateSlider = updateSlider;
 
         updateSlider(data.percent);
 
-        el.addEventListener('mouseenter', function () {
+        this._onMouseEnter = function () {
             handle.setAttribute('material', 'color', data.hoverColor);
-        });
+        };
+        el.addEventListener('mouseenter', this._onMouseEnter);
 
-        el.addEventListener('mouseleave', function () {
+        this._onMouseLeave = function () {
             handle.setAttribute('material', 'color', data.handleColor);
-        });
+        };
+        el.addEventListener('mouseleave', this._onMouseLeave);
 
-        el.addEventListener('click', function (evt) {
+        this._onClick = function (evt) {
+            // keyboard-activated clicks (sxr-interactable) carry no intersection detail
+            if (!evt.detail || !evt.detail.intersection) { return; }
             const localCoordinates = el.object3D.worldToLocal(evt.detail.intersection.point);
             const sliderBarWidth = this.sliderWidth || sliderWidth;
             if (localCoordinates.x <= (-sliderBarWidth / 2)) {
@@ -84,14 +89,25 @@ AFRAME.registerComponent('sxr-slider', {
             }
             updateSlider(data.percent);
             const guiInteractable = el.getAttribute("sxr-interactable");
-            const clickActionFunctionName = guiInteractable.clickAction;
-            // find object
-            const clickActionFunction = window[clickActionFunctionName];
-            // is object a function?
-            if (typeof clickActionFunction === "function") clickActionFunction(evt, data.percent);
-        });
+            const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
+            if (clickActionFunction) clickActionFunction(evt, data.percent);
+        };
+
+        el.addEventListener('click', this._onClick);
 
 
+    },
+    update: function (oldData) {
+        // `percent` is live: setAttribute after init moves the handle
+        if (this._updateSlider && oldData && oldData.percent !== undefined && oldData.percent !== this.data.percent) {
+            this._updateSlider(this.data.percent);
+        }
+    },
+    remove: function () {
+        const el = this.el;
+        el.removeEventListener('mouseenter', this._onMouseEnter);
+        el.removeEventListener('mouseleave', this._onMouseLeave);
+        el.removeEventListener('click', this._onClick);
     },
 });
 

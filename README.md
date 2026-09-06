@@ -2,9 +2,6 @@
 
 A graphical User Interface framework for [A-Frame](https://aframe.io).
 
-
-![](examples/images/overview.png)
-
 The `senangstart-xr` components provide layout and gui widgets that can be used
 to create a user interface in an A-Frame scene. 
 
@@ -12,7 +9,7 @@ The `dist/senangstart-xr.js` file defines the following components:
 
 | Component             | Primitive                | Description |
 | --------------------  | ------------------------ | -------------------------------------------------------  |
-| sxr-flex-container    | a-sxr-flex-container     | Layout container with flexbox-inspired                   |
+| sxr-flex-container    | a-sxr-flex-container     | Layout container with flexbox-inspired layout                           |
 | sxr-item              | <none>                   | Used by other components for common properties like height and width    |
 | sxr-interactable      | <none>                   | Used by other components to define onclick behavior      |
 | sxr-cursor            | a-sxr-cursor             | Cursor used to interact with GUI elements.               |
@@ -22,10 +19,10 @@ The `dist/senangstart-xr.js` file defines the following components:
 | sxr-radio             | a-sxr-radio              | Radio button                                             |
 | sxr-toggle            | a-sxr-toggle             | Toggle button                                            |
 | sxr-slider            | a-sxr-slider             | Slider component                                         |
-| sxr-vertical-slider   | a-sxr-slider             | Vertical slider component                                |
+| sxr-vertical-slider   | a-sxr-vertical-slider    | Vertical slider component                                |
 | sxr-input             | a-sxr-input              | Text input field                                         |
 | sxr-label             | a-sxr-label              | Text label                                               |
-| sxr-progress-bar      | a-sxr-progress-bar       | Progress bar                                             |
+| sxr-progress-bar      | a-sxr-progressbar        | Progress bar                                             |
 | sxr-circle-loader     | a-sxr-circle-loader      | Circular progress meter                                  |
 | sxr-circle-timer      | a-sxr-circle-timer       | Circular progress meter with timer                       |
 
@@ -51,7 +48,18 @@ The `dist/senangstart-xr.js` file defines the following components:
 | error | `#EF4444` | |
 | neutral | `#1B1B1F` | key_grey_light |
 
-The default text font is Outfit, loaded from `Outfit-Regular.woff2`; `Outfit-Regular.ttf` is included as a fallback/source asset.
+### Text font
+
+The default font family is `Outfit-Regular.ttf` (`SXR.fonts.default`). When a
+font **filename** (`*.ttf` / `*.otf` / `*.woff` / `*.woff2`) is passed, the
+canvas renderer tries to register it through the FontFace API (resolved
+relative to the page URL). While the font loads — or when FontFace is
+unavailable — text renders with the system font stack
+(`Arial, Helvetica, sans-serif`); once loaded, subsequent text redraws use the
+registered family. To use a custom font directly, pass a font-family name that
+is already available to the canvas 2D context (e.g. `font-family="Arial"`).
+`Outfit-Regular.ttf` at the repo root (also under `examples/`) is the bundled
+design asset.
 
 
 
@@ -75,10 +83,56 @@ Include A-Frame, then the SenangStart XR bundle, in the `<head>` of your page:
 Then use the `a-sxr-*` primitives inside your `<a-scene>` (see the Components
 section below and `examples/index.html`).
 
+### Install via npm
+
+```bash
+npm install senangstart-xr
+```
+
+A-Frame is a peer dependency and must be loaded on the page first. The package
+ships the built bundles in `dist/`; reference `dist/senangstart-xr.min.js` via
+a `<script>` tag (the bundle registers its components against the global
+`AFRAME` object and is not `require()`-able):
+
+```html
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+<script src="node_modules/senangstart-xr/dist/senangstart-xr.min.js"></script>
+```
+
+CDN usage (after publishing):
+
+```html
+<script src="https://unpkg.com/senangstart-xr/dist/senangstart-xr.min.js"></script>
+```
+
+### Interaction notes
+
+- Callbacks (`onclick`, `onhover`, `callback`) are the **names of global
+  functions** resolved on `window` at event time; define them before the scene
+  loads. A typo silently no-ops. Modern integrations can skip globals entirely
+  and listen to the widget's own events
+  (`el.addEventListener('click', handler)`).
+- Keyboard activation (`key-code`) is registered per widget; binding the same
+  key to multiple widgets fires all of them.
+- Widgets declare ARIA roles and are keyboard-reachable (`tabindex="0"` on
+  button, toggle, radio).
+
+## License
+
+[MIT](LICENSE) © Bookklik Technologies
+
 
 ## Building
 
-Run the following to build to the examples/js folder:
+Build the production bundle to `dist/` (`senangstart-xr.min.js` + source map):
+
+`npm run dist`
+
+Build an unminified development bundle to `dist/` (`senangstart-xr.js`):
+
+`npm run dist-dev`
+
+Build to the examples/js folder:
 
 `npm run dist-example`
 
@@ -109,10 +163,17 @@ The webpack-dev-server should now be running at http://localhost:8080
 | is-top-container | Setting background of the flex-container                                                                                                                           | false         |
 | panel-color      | Background color of the flex-container                                                                                                                             | #202127       |
 | panel-rounded    | flex-container panel rounding radius                                                                                                                               | 0.05          |
+| font-family      | Default font family inherited by child widgets (styles.fontFamily)                                                                                                 | Outfit-Regular.ttf |
+| font-color       | Default text color inherited by child widgets (styles.fontColor)                                                                                                   | #F1F5F9       |
+| border-color     | Default border color inherited by child widgets (styles.borderColor)                                                                                               | #1B1B1F       |
+| background-color | Default background color inherited by child widgets (styles.backgroundColor)                                                                                       | #202127       |
+| hover-color      | Default hover color inherited by child widgets (styles.hoverColor)                                                                                                 | #0EA5E9       |
+| active-color     | Default active color inherited by child widgets (styles.activeColor)                                                                                               | #2563EB       |
+| handle-color     | Default handle color inherited by child widgets (styles.handleColor)                                                                                               | #F1F5F9       |
 
 ```html
 <a-sxr-flex-container 
-    flex-direction="column" justify-content="center" align-items="normal" component-padding="0.1" opacity="0.7" width="3.5" height="4.5" 
+    flex-direction="column" justify-content="center" align-items="center" item-padding="0.1" opacity="0.7" width="3.5" height="4.5" 
     panel-color="#072B73" 
     panel-rounded="0.2"
 	position="0 2.5 -6" rotation="0 0 0"
@@ -128,17 +189,21 @@ The webpack-dev-server should now be running at http://localhost:8080
 | Property    | Description                                               | Default Value |
 | --------    | -------------------------------------------------------   | ------------- |
 | color       | Cursor initial color                                      | #F1F5F9       |
-| hover-color | Cursor hover color                                        | #F1F5F9       |
+| hover-color | Cursor hover color                                        | #0EA5E9       |
 | active-color| Cursor selection/active color                             | #2563EB       |
 | distance    | distance of the pointer from the camera                   | -1            |
 | design      | choose a design: 'dot', 'ring', 'cross' or 'reticle'      | 'dot'         |
+
+The `a-sxr-cursor` primitive includes a pre-scoped raycaster by default
+(`objects: [sxr-interactable]`, `interval: 100`), so cursor raycasts only test
+interactive widgets instead of the whole scene. Override it with a
+`raycaster="..."` attribute if you need different targets.
 
 ```html
 		<!-- Camera + cursor. -->
 		<a-entity id="cameraRig" position="0 1.6 0">
 			<a-camera look-controls wasd-controls position="0 0 0">
 				<a-sxr-cursor id="cursor"
-						  raycaster="objects: [sxr-interactable]"
 						  fuse="true" fuse-timeout="2000"
 						  color="#ECEFF1"
 						  hover-color="#CFD8DC"
@@ -149,7 +214,7 @@ The webpack-dev-server should now be running at http://localhost:8080
 		</a-entity>		
 ```
 
-#### Example without fuse/gaze trigger (click trigger):
+#### Example with an explicit raycaster override (click trigger):
 
 ```html
 		<!-- Camera + cursor. -->
@@ -164,6 +229,24 @@ The webpack-dev-server should now be running at http://localhost:8080
 		</a-entity>
 ```
 
+### VR controllers
+
+Widgets work with A-Frame's controller-based raycasters out of the box —
+controller `click` events carry the ray intersection, so sliders and inputs
+respond to the exact hit point:
+
+```html
+		<a-entity id="leftHand" laser-controls="hand: left"
+				  raycaster="objects: [sxr-interactable]"></a-entity>
+		<a-entity id="rightHand" laser-controls="hand: right"
+				  raycaster="objects: [sxr-interactable]"></a-entity>
+```
+
+Use A-Frame's [`raycaster-origin`](https://aframe.io/docs/core/components/raycaster.html)
+component on the controller entity to move the ray origin (e.g. to the tip of
+a controller model).
+```
+
 
 ### a-sxr-button Component
 #### Properties
@@ -173,12 +256,12 @@ The webpack-dev-server should now be running at http://localhost:8080
 | on                 | Event that triggers onclick action                        | click         |
 | value              | Text of button label                                      |               |
 | font-size          | Font size for button                                      | 0.2           |
-| font-family        | Font family for button                                    | ''            |
+| font-family        | Font family for button                                    | Outfit-Regular.ttf |
 | font-color         | Text color for button label                               | #F1F5F9       |
-| border-color       | Border color of button                                    | #F1F5F9       |
+| border-color       | Border color of button                                    | #1B1B1F       |
 | focus-color        | Focus color of button                                     | #0EA5E9       |
 | background-color   | Background color of button                                | #202127       |
-| hover-color        | Background color when button is in hover state            | #161618       |
+| hover-color        | Background color when button is in hover state            | #0EA5E9       |
 | active-color       | Background color when button is pressed down              | #2563EB       |
 | toggle             | If true, button acts as toggle button with on/off state   | false         |
 | toggle-state       | Setting the toggle button on/off state                    | false         |
@@ -189,6 +272,7 @@ The webpack-dev-server should now be running at http://localhost:8080
 | base-depth         | Depth of the base of the button                           | 0.01          |
 | gap                | Gap between button and base                               | 0.025         |
 | margin             | Margin around button                                      | 0 0 0 0       |
+| radius             | Corner radius of the button base                          | 0             |
 
 | bevel              | If true, button bevel is enabled                          | false         |
 | bevel-segments     | Segments of the button bevel                              | 5             |
@@ -232,7 +316,7 @@ The webpack-dev-server should now be running at http://localhost:8080
 | background-color   | Background color of item                                  | #202127       |
 | loaded             | Initial percentage progress value                         | 0.5           |
 | font-color         | Text color for progress percentage text                   | #F1F5F9       |
-| font-family        | Font family for progress percentage text                  | ''            |
+| font-family        | Font family for progress percentage text                  | Outfit-Regular.ttf |
 | font-size          | Font size for progress percentage text                    | 0.2           |
 | height             | Height of item                                            | 1             |
 | width              | Width of item                                             | 1             |
@@ -256,14 +340,14 @@ The webpack-dev-server should now be running at http://localhost:8080
 | Property           | Description                                               | Default Value |
 | --------           | -------------------------------------------------------   | ------------- |
 | font-size          | Font size for countdown text                              | 0.2           |
-| font-family        | Font family for progress countdown text                   | ''            |
+| font-family        | Font family for progress countdown text                   | Outfit-Regular.ttf |
 | font-color         | Text color for progress countdown text                    | #F1F5F9       |
-| border-color       | Color of indicators that show 25/50/75/100 progress       | #202127       |
+| border-color       | Color of indicators that show 25/50/75/100 progress       | #1B1B1F       |
 | background-color   | Background color of item                                  | #202127       |
 | active-color       | Color of ring that indicates countdown progress           | #2563EB       |
 
-| count-down         | Initial countdown value in seconds                        | 0             |
-| callback           | callback function that fires when countdown expires       | ''            |
+| count-down         | Initial countdown value in seconds                        | 10            |
+| callback           | Name of a global function that fires when countdown expires | ''          |
 
 | width              | Width of item                                             | 1             |
 | height             | Height of item                                            | 1             |
@@ -293,9 +377,9 @@ The webpack-dev-server should now be running at http://localhost:8080
 | icon-font-size     | Icon size for button                                      | 0.4           |
 
 | font-color         | Text color for button label                               | #F1F5F9       |
-| border-color       | Border color of button                                    | #F1F5F9       |
+| border-color       | Border color of button                                    | #1B1B1F       |
 | background-color   | Background color of item                                  | #202127       |
-| hover-color        | Background color when button is in hover state            | #161618       |
+| hover-color        | Background color when button is in hover state            | #0EA5E9       |
 | active-color       | Background color when button is pressed down              | #2563EB       |
 | toggle             | Toggle status                                             | false         |
 | toggle-state       | Setting the toggle button on/off state                    | false         |
@@ -327,13 +411,12 @@ The webpack-dev-server should now be running at http://localhost:8080
 | icon-font-size   | Icon size for button                                   | 0.35          |
 
 | font-color       | Text color for button label                            | #F1F5F9       |
-| value            |  			                                            | ''            |
-| font-family      | Font family for button                                 | ''            |
+| value            | Text of button label                                   | ''            |
+| font-family      | Font family for button                                 | Outfit-Regular.ttf |
 | font-size        | Font size for button                                   | 0.2           |
-| font-color       | Text color for button label                            | #F1F5F9       |
-| border-color     | Border color of button                                 | #F1F5F9       |
+| border-color     | Border color of button                                 | #1B1B1F       |
 | background-color | Background color of button                             | #202127       |
-| hover-color      | Background color when button is in hover state         | #161618       |
+| hover-color      | Background color when button is in hover state         | #0EA5E9       |
 | active-color     | Background color when button is pressed down           | #2563EB       |
 | toggle           | Toggle status                                          | false         |
 | toggle-state     | Setting the toggle button on/off state                 | false         |
@@ -365,12 +448,12 @@ The webpack-dev-server should now be running at http://localhost:8080
 | value              | Input text value                                      |                |
 
 | font-size          | Font size for input                                   | 0.2            |
-| font-family        | Font family for input                                 | ''             |
+| font-family        | Font family for input                                 | Outfit-Regular.ttf |
 | font-color         | Text input color                                      | #161618        |
-| border-color       | Border color of input                                 | #161618        |
-| background-color   | Background color of input                             | #202127        |
-| border-hover-color | Border color when input is in hover state             | #202127        |
-| hover-color        | Background color when input is in hover state         | #161618        |
+| border-color       | Border color of input                                 | #1B1B1F        |
+| background-color   | Background color of input                             | #F1F5F9        |
+| border-hover-color | Border color when input is in hover state             | #0EA5E9        |
+| hover-color        | Background color when input is in hover state         | #F1F5F9        |
 
 | margin             | Margin around item                                    | 0 0 0 0        |
 | height             | Height of item                                        | 1              |
@@ -394,16 +477,20 @@ The webpack-dev-server should now be running at http://localhost:8080
 
 | Property         | Description                                             | Default Value  |
 | --------         | ------------------------------------------------------- | -------------  |
-| value            |  			                                             | ''             |
+| value            | Text of the label  			                             | ''             |
 | align            | text-align: 'left','center','right' 		             | 'center'       |
 | anchor           | text anchor position: 'left','center','right' 	         | 'center'       |
-| lineHeight       | line-height of the label                                | 0.2            |
-| font-size        | Font size for input                                     | 0.2            |
-| font-family      | Font family for input                                   | ''             |
-| font-color       | Text input color                                        | #161618        |
-| background-color | Background color of label                               | #F1F5F9        |
+| line-height      | line-height of the label                                | 0.2            |
+| letter-spacing   | letter spacing of the label                             | 0              |
+| font-size        | Font size for label                                     | 0.2            |
+| font-family      | Font family for label                                   | Outfit-Regular.ttf |
+| font-color       | Text color of label                                     | #F1F5F9        |
+| background-color | Background color of label                               | #202127        |
+| opacity          | Opacity of the label background                         | 1.0            |
 
 | text-depth       | distance from the text to label background              | 0.01           |
+| text-stroke-color  | Color of the text stroke (canvas stroke style)        | ''             |
+| text-stroke-width   | Width of the text stroke (-1 disables)               | -1             |
 | height           | Height of item                                          | 1              |
 | width            | Width of item                                           | 1              |
 | margin           | Margin around item                                      | 0 0 0 0        |
@@ -430,6 +517,7 @@ The webpack-dev-server should now be running at http://localhost:8080
 | --------         | -------------------------------------------------------   | ------------- |
 | background-color | Background color of progress bar                          | #202127       |
 | active-color     | Color for indicating progress level                       | #2563EB       |
+| percent          | Progress amount, from 0.0 to 1.0                          | 0.5           |
 | height           | Height of item                                            | 1             |
 | width            | Width of item                                             | 1             |
 | margin           | Margin around item                                        | 0 0 0 0       |
@@ -438,6 +526,7 @@ The webpack-dev-server should now be running at http://localhost:8080
 ```html
 <a-sxr-progressbar 
 	width="2.5" height="0.25"
+	percent="0.4"
 	margin="0 0 0.05 0"
 >
 </a-sxr-progressbar>
@@ -450,21 +539,20 @@ The webpack-dev-server should now be running at http://localhost:8080
 | Property         | Description                                               | Default Value  |
 | --------         | -------------------------------------------------------   | -------------- |
 | on               | Event that triggers onclick action                        | click          |
-| checked          |                                                           | false          |
-| active           |                                                           | true           |
-| toggle           | Toggle status                                             | false          |
-| toggle-state     | Setting the radio button on/off state                     | false          |
+| checked          | Whether the radio is initially selected                   | false          |
+| active           | Whether the radio is enabled                              | true           |
+| group            | Group name; selecting one radio unchecks same-group radios | ''            |
 
-| value            |  			                                               | ''             |
-| font-family      | Font family for radio button                              | ''             |
+| value            | Text of the radio button label                            | ''             |
+| font-family      | Font family for radio button                              | Outfit-Regular.ttf |
 | font-size        | Font size for radio button                                | 0.2            |
 | font-color       | Text color for radio button label                         | #161618        |
-| border-width     |                                                           | 1              |
-| border-color     | Border color of radio button                              | #F1F5F9        |
+| border-color     | Border color of radio button                              | #1B1B1F        |
 | background-color | Background color of radio button                          | #F1F5F9        |
-| hover-color      | Background color when radio button is in hover state      | #1B1B1F        |
-| handle-color     |                                                           | #202127        |
+| hover-color      | Background color when radio button is in hover state      | #0EA5E9        |
+| handle-color     | Color of the radio center handle                          | #202127        |
 | active-color     | Background color when radio button is pressed down        | #2563EB        |
+| radiosizecoef    | Scale factor for the radio circle size                    | 1              |
 
 | height           | Height of radio button                                    | 1              |
 | width            | Width of radio button                                     | 1              |
@@ -487,24 +575,24 @@ The webpack-dev-server should now be running at http://localhost:8080
 
 | Property            | Description                                               | Default Value  |
 | --------            | -------------------------------------------------------   | -------------  |
-| active-color        |                                                           | #2563EB        |
-| background-color    |                                                           | #F1F5F9        |
-| border-color        |                                                           | #202127        |
-| handle-color        |                                                           | #F1F5F9        |
-| handle-outer-radius |                                                           | '0.17'         |
-| handle-inner-radius |                                                           | '0.13'         |
-| handle-outer-depth  |                                                           | '0.04'         |
-| handle-inner-depth  |                                                           | '0.02'         |
+| active-color        | Color of the active (filled) part of the track            | #2563EB        |
+| background-color    | Background color of the track                             | #F1F5F9        |
+| border-color        | Color of the inactive part of the track                   | #1B1B1F        |
+| handle-color        | Color of the handle                                       | #F1F5F9        |
+| handle-outer-radius | Outer radius of the handle                                | 0.17           |
+| handle-inner-radius | Inner radius of the handle                                | 0.13           |
+| handle-outer-depth  | Depth of the outer handle                                 | 0.04           |
+| handle-inner-depth  | Depth of the inner handle                                 | 0.02           |
 | height              | Height of item                                            | 1              |
-| hover-color         |                                                           | #1B1B1F        |
-| left-right-padding  |                                                           | '0.25'         |
+| hover-color         | Handle color while hovering                               | #0EA5E9        |
+| left-right-padding  | Padding applied to the track width                        | 0.25           |
 | margin              | Margin around item                                        | 0 0 0 0        |
 | onclick             | Javascript function to execute on click                   |               |
-| onhover             | Javascript function to execute on click                   |               |
-| percent             |                                                           | '0.5'          |
-| slider-bar-depth    |                                                           | '0.03'         |
-| slider-bar-height   |                                                           | '0.05'         |
-| top-bottom-padding  |                                                           | '0.125'        |
+| onhover             | Javascript function to execute on hover                   |               |
+| percent             | Current slider value, from 0.0 to 1.0                     | 0.5            |
+| slider-bar-depth    | Depth of the slider track                                 | 0.03           |
+| slider-bar-height   | Height of the slider track                                | 0.05           |
+| top-bottom-padding  | Padding applied to the track height                       | 0.125          |
 | width               | Width of item                                             | 1              |
 
 ```html
@@ -524,20 +612,20 @@ The webpack-dev-server should now be running at http://localhost:8080
 | Property         | Description                                               | Default Value  |
 | --------         | -------------------------------------------------------   | -------------- |
 | on               | Event that triggers onclick action                        | click          |
-| checked          |                                                           | false          |
-| active           |                                                           | false          |
+| checked          | Whether the toggle is on                                  | false          |
+| active           | Whether the toggle is enabled                             | true           |
 | toggle           | Toggle status                                             | false          |
 | toggle-state     | Setting the toggle toggle button on/off state             | false          |
 
-| value            |  			                                               | ''             |
-| font-family      | Font family for toggle button                             | ''             |
+| value            | Text of the toggle button label                           | ''             |
+| font-family      | Font family for toggle button                             | Outfit-Regular.ttf |
 | font-size        | Font size for toggle button                               | 0.2            |
-| font-color       | Text color for toggle button label                        | #F1F5F9        |
+| font-color       | Text color for toggle button label                        | #161618        |
 | border-width     |                                                           | 1              |
-| border-color     | Border color of toggle button                             | #F1F5F9        |
-| background-color | Background color of toggle button                         | #202127        |
-| hover-color      | Background color when toggle button is in hover state     | #161618        |
-| handle-color     |                                                           | #F1F5F9        |
+| border-color     | Border color of toggle button                             | #1B1B1F        |
+| background-color | Background color of toggle button                         | #F1F5F9        |
+| hover-color      | Background color when toggle button is in hover state     | #0EA5E9        |
+| handle-color     | Color of the toggle handle                                | #F1F5F9        |
 | active-color     | Background color when toggle button is pressed down       | #2563EB        |
 
 | height           | Height of toggle button                                   | 1              |
@@ -561,43 +649,40 @@ The webpack-dev-server should now be running at http://localhost:8080
 
 | Property            | Description                                               | Default Value  |
 | --------            | -------------------------------------------------------   | -------------  |
-| active-color        |                                                           | #2563EB        |
-| background-color    |                                                           | #F1F5F9        |
-| border-color        |                                                           | #202127        |
-| handle-color        |                                                           | #F1F5F9        |
-| handle-outer-radius |                                                           | 0.17           |
-| handle-inner-radius |                                                           | 0.13           |
-| handle-outer-depth  |                                                           | 0.04           |
-| handle-inner-depth  |                                                           | 0.02           |
-| hover-color         |                                                           | #1B1B1F        |
+| active-color        | Color of the active (filled) part of the track            | #2563EB        |
+| background-color    | Background color of the track                             | #F1F5F9        |
+| border-color        | Color of the inactive part of the track                   | #1B1B1F        |
+| handle-color        | Color of the handle                                       | #F1F5F9        |
+| handle-outer-radius | Outer radius of the handle                                | 0.17           |
+| handle-inner-radius | Inner radius of the handle                                | 0.13           |
+| handle-outer-depth  | Depth of the outer handle                                 | 0.04           |
+| handle-inner-depth  | Depth of the inner handle                                 | 0.02           |
+| hover-color         | Handle color while hovering                               | #0EA5E9        |
 | hover-font-size     | Font size of label indicating where user is hovering      | 0.2            |
-| hover-height        |  Height of label indicating where user is hovering        | 1.0            |
-| hover-margin        |  Margin of label indicating where user is hovering        | 1.0            |
+| hover-height        |  Height of label indicating where user is hovering        | 0.35           |
 | hover-percent       | Current percentage where user is hovering                 |                |
-| hover-width         | Width of label indicating where user is hovering          | 1.0            |
-| left-right-padding  |                                                           | 0.25           |
+| hover-width         | Width of label indicating where user is hovering          | 0.7            |
 | margin              | Margin around item                                        | '0 0 0 0'      |
 | onclick             | Javascript function to execute on click                   |                |
-| onhover             | Javascript function to execute on click                   |                |
+| onhover             | Javascript function to execute on hover                   |                |
 | opacity             | Transparency of the vertical slider background            | 1.0            |
 | output-font-size    |  Font size of label indicating output value               | 0.2            |
 | output-function     |  Name of function to calculate output value from percent  |                |
-| output-height       |   Height of label indicating output value                 | 1.0            |
-| output-margin       |  Margin of label indicating output value                  | '0 0 0 0'      |
+| output-text-depth   |   Distance from output text to label background           | 0.25           |
 | output-width        |  Width of label indicating output value                   | 1.0            |
 | percent             |  Current selected slider value, from 0.0 to 1.0           | 0.5            |
 | slider-bar-depth    |                                                           | 0.03           |
-| slider-bar-height   |                                                           | 0.05           |
-| top-bottom-padding  |                                                           | 0.125          |
+| slider-bar-width    |  Width of the slider track                                | 0.08           |
+| top-bottom-padding  |  Padding applied to the track height                      | 0.25           |
 | height              | Height of item                                            | 1              |
 | width               | Width of item                                             | 1              |
 
 ```html
-<a-sxr-slider 	
+<a-sxr-vertical-slider
 	width="2.5" height="0.75"
 	onclick="slideActionFunction"
 	percent="0.29"
 	margin="0 0 0.05 0"
 >
-</a-sxr-slider>
+</a-sxr-vertical-slider>
 ```

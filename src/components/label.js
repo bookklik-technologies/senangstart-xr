@@ -36,16 +36,36 @@ AFRAME.registerComponent('sxr-label', {
 
 
     },
-    update: function (_oldData) {
+    update: function (oldData) {
+        const data = this.data;
+        const hasOld = oldData && Object.keys(oldData).length > 0;
         this.guiItem = this.el.getAttribute("sxr-item");
-        this.updateBackground();
 
-        if(this.textEntity){
+        const textKey = [
+            data.value, data.fontSize, data.lineHeight, data.letterSpacing,
+            data.fontFamily, data.fontColor, data.align,
+            data.textStrokeColor, data.textStrokeWidth, data.textDepth
+        ].join('|');
+        const backgroundKey = [
+            data.backgroundColor, data.opacity, this.guiItem.width, this.guiItem.height
+        ].join('|');
 
+        if (!hasOld || textKey !== this._lastTextKey) {
+            this._lastTextKey = textKey;
+            if (this.textEntity) {
+                this.setText(data.value);
+            }
+        }
+
+        if (!hasOld || backgroundKey !== this._lastBackgroundKey) {
+            this._lastBackgroundKey = backgroundKey;
+            this.updateBackground();
+        }
+    },
+    remove: function () {
+        if (this.textEntity) {
             SXR.removeEntity(this.textEntity);
-
-            this.setText(this.data.value);
-   
+            this.textEntity = null;
         }
     },
     updateBackground: function () {
@@ -79,7 +99,7 @@ AFRAME.registerComponent('sxr-label', {
         }
     },
     setText: function (newText) {
-        const textEntity = SXR.createTextEntity({
+        const options = {
             value: newText,
             width: this.guiItem.width / 1.05,
             height: this.guiItem.height,
@@ -90,7 +110,13 @@ AFRAME.registerComponent('sxr-label', {
             strokeColor: this.data.textStrokeColor || undefined,
             strokeWidth: this.data.textStrokeWidth >= 0 ? this.data.textStrokeWidth : undefined,
             align: this.data.align
-        });
+        };
+        if (this.textEntity && SXR.redrawTextEntity(this.textEntity, options)) {
+            this.textEntity.setAttribute('position', `0 0 ${this.data.textDepth}`);
+            return;
+        }
+        if (this.textEntity) { SXR.removeEntity(this.textEntity); }
+        const textEntity = SXR.createTextEntity(options);
         this.textEntity = textEntity;
         textEntity.setAttribute('position', `0 0 ${this.data.textDepth}`);
         this.el.appendChild(textEntity);

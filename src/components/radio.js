@@ -24,8 +24,7 @@ AFRAME.registerComponent('sxr-radio', {
         const data = this.data;
         const el = this.el;
         const guiItem = el.getAttribute("sxr-item");
-        this.guiItem = guiItem;        
-        this.checkedState = data.checked;
+        this.guiItem = guiItem;
         this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
         const guiInteractable = el.getAttribute("sxr-interactable");
         this.guiInteractable = guiInteractable;
@@ -55,23 +54,42 @@ AFRAME.registerComponent('sxr-radio', {
         radioCenter.setAttribute('rotation', '0 0 0');
         radioCenter.setAttribute('material', `color:${data.handleColor}; shader: flat;`);
         radioBox.appendChild(radioCenter);
+        this.radioCenter = radioCenter;
 
         this.setText(data.value);
 
         this.updateToggle(data.active);
-        el.setAttribute("checked",data.active);
 
-        el.addEventListener('mouseenter', function() {
+        if (data.checked) {
+            // initial checked state: set the resting color without animations
+            radioCenter.setAttribute('material', 'color', data.activeColor);
+        }
+
+        this._onMouseEnter = function() {
             radioborder.removeAttribute('animation__leave');
             radioborder.setAttribute('animation__enter', `property: material.color; from: ${data.borderColor}; to:${data.hoverColor}; dur:200;`);
-        });
-        el.addEventListener('mouseleave', function() {
+        };
+        el.addEventListener('mouseenter', this._onMouseEnter);
+        this._onMouseLeave = function() {
             radioborder.removeAttribute('animation__enter');
             radioborder.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.borderColor}; dur:200; easing: easeOutQuad;`);
-        });
-        el.addEventListener(data.on, function (evt) {
-            data.checked = !data.checked;
-            if (data.checked && data.group) {
+        };
+        el.addEventListener('mouseleave', this._onMouseLeave);
+
+        // group support: external check/uncheck events keep visuals in sync
+        this._onCheck = function () {
+            el.setAttribute('sxr-radio', 'checked', 'true');
+        };
+        el.addEventListener('check', this._onCheck);
+        this._onUncheck = function () {
+            el.setAttribute('sxr-radio', 'checked', 'false');
+        };
+        el.addEventListener('uncheck', this._onUncheck);
+
+        this._onActivate = function (evt) {
+            // a radio stays selected once checked; repeated clicks are a no-op
+            if (data.checked) { return; }
+            if (data.group) {
                 const siblings = el.parentElement ? el.parentElement.querySelectorAll('[sxr-radio]') : [];
                 siblings.forEach(function(sibling) {
                     if (sibling !== el) {
@@ -82,52 +100,75 @@ AFRAME.registerComponent('sxr-radio', {
                     }
                 });
             }
-            if (data.checked) {
-                radioCenter.removeAttribute('animation__colorOut');
-                radioCenter.removeAttribute('animation__rotationOut');
-                radioCenter.removeAttribute('animation__position1Out');
-                radioCenter.removeAttribute('animation__position2Out');
-                radioCenter.setAttribute('animation__colorIn', `property: material.color; from: ${data.handleColor}; to:${data.activeColor}; dur:500; easing:easeInOutCubic;`);
-                radioCenter.setAttribute('animation__rotationIn', `property: rotation; from: 0 0 0; to:-180 0 0; dur:500; easing:easeInOutCubic;`);
-                radioCenter.setAttribute('animation__position1In', `property: position; from: 0 0 0; to:0 0.3 0; dur:200; easing:easeInOutCubic;`);
-                radioCenter.setAttribute('animation__position2In', `property: position; from: 0 0.3 0; to:0 0 0; dur:200; easing:easeInOutCubic; delay:300;`);
-            }else{
-                radioCenter.removeAttribute('animation__colorIn');
-                radioCenter.removeAttribute('animation__rotationIn');
-                radioCenter.removeAttribute('animation__position1In');
-                radioCenter.removeAttribute('animation__position2In');
-                radioCenter.setAttribute('animation__colorOut', `property: material.color; from: ${data.activeColor}; to:${data.handleColor}; dur:500; easing:easeInOutCubic;`);
-                radioCenter.setAttribute('animation__rotationOut', `property: rotation; from: -180 0 0; to:0 0 0; dur:500; easing:easeInOutCubic;`);
-                radioCenter.setAttribute('animation__position1Out', `property: position; from: 0 0 0; to:0 0.3 0; dur:200; easing:easeInOutCubic; `);
-                radioCenter.setAttribute('animation__position2Out', `property: position; from: 0 0.3 0; to:0 0 0; dur:200; easing:easeInOutCubic; delay:300;`);
-            }
+            el.setAttribute('sxr-radio', 'checked', 'true');
 
-            const guiInteractable = el.getAttribute("sxr-interactable");
-            const clickActionFunctionName = guiInteractable.clickAction;
-            // find object
-            const clickActionFunction = window[clickActionFunctionName];
-            // is object a function?
-            if (typeof clickActionFunction === "function") clickActionFunction(evt);
-        });
+            const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
+            if (clickActionFunction) clickActionFunction(evt);
+        };
+        el.addEventListener(data.on, this._onActivate);
 
         ////WAI ARIA Support
         el.setAttribute('role', 'radio');
+        el.setAttribute('tabindex', '0');
 
     },
-    update: function(){
+    update: function (oldData) {
         const data = this.data;
+        const hasOldData = oldData && Object.keys(oldData).length > 0;
+
+        if (hasOldData && data.checked !== oldData.checked && this.radioCenter) {
+            if (data.checked) {
+                this.applyCheckedVisuals();
+            } else {
+                this.applyUncheckedVisuals();
+            }
+        }
         this.updateToggle(data.active)
 
-        if(this.textEntity){
-
+        if (hasOldData && data.value !== oldData.value && this.textEntity) {
             SXR.removeEntity(this.textEntity);
-
-            this.setText(this.data.value);
-   
+            this.setText(data.value);
         }
 
     },
 
+    remove: function () {
+        const el = this.el;
+        el.removeEventListener('mouseenter', this._onMouseEnter);
+        el.removeEventListener('mouseleave', this._onMouseLeave);
+        el.removeEventListener('check', this._onCheck);
+        el.removeEventListener('uncheck', this._onUncheck);
+        el.removeEventListener(this.data.on, this._onActivate);
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
+    },
+
+    applyCheckedVisuals: function () {
+        const data = this.data;
+        const radioCenter = this.radioCenter;
+        radioCenter.removeAttribute('animation__colorOut');
+        radioCenter.removeAttribute('animation__rotationOut');
+        radioCenter.removeAttribute('animation__position1Out');
+        radioCenter.removeAttribute('animation__position2Out');
+        radioCenter.setAttribute('animation__colorIn', `property: material.color; from: ${data.handleColor}; to:${data.activeColor}; dur:500; easing:easeInOutCubic;`);
+        radioCenter.setAttribute('animation__rotationIn', `property: rotation; from: 0 0 0; to:-180 0 0; dur:500; easing:easeInOutCubic;`);
+        radioCenter.setAttribute('animation__position1In', `property: position; from: 0 0 0; to:0 0.3 0; dur:200; easing:easeInOutCubic;`);
+        radioCenter.setAttribute('animation__position2In', `property: position; from: 0 0.3 0; to:0 0 0; dur:200; easing:easeInOutCubic; delay:300;`);
+    },
+    applyUncheckedVisuals: function () {
+        const data = this.data;
+        const radioCenter = this.radioCenter;
+        radioCenter.removeAttribute('animation__colorIn');
+        radioCenter.removeAttribute('animation__rotationIn');
+        radioCenter.removeAttribute('animation__position1In');
+        radioCenter.removeAttribute('animation__position2In');
+        radioCenter.setAttribute('animation__colorOut', `property: material.color; from: ${data.activeColor}; to:${data.handleColor}; dur:500; easing:easeInOutCubic;`);
+        radioCenter.setAttribute('animation__rotationOut', `property: rotation; from: -180 0 0; to:0 0 0; dur:500; easing:easeInOutCubic;`);
+        radioCenter.setAttribute('animation__position1Out', `property: position; from: 0 0 0; to:0 0.3 0; dur:200; easing:easeInOutCubic; `);
+        radioCenter.setAttribute('animation__position2Out', `property: position; from: 0 0.3 0; to:0 0 0; dur:200; easing:easeInOutCubic; delay:300;`);
+    },
 
     updateToggle: function(active){
         this.el.setAttribute('aria-disabled', (!active).toString());
@@ -136,7 +177,7 @@ AFRAME.registerComponent('sxr-radio', {
     setText: function (newText) {
         const textEntityX = this.guiItem.height  - this.guiItem.width*0.5;
         const textWidth = Math.max(0.1, this.guiItem.width - this.guiItem.height - 0.08);
-        const textEntity = SXR.createTextEntity({
+        const options = {
             value: newText,
             width: textWidth,
             height: this.guiItem.height * 0.72,
@@ -144,7 +185,10 @@ AFRAME.registerComponent('sxr-radio', {
             fontFamily: this.data.fontFamily,
             color: this.data.fontColor,
             align: 'left'
-        });
+        };
+        if (this.textEntity && SXR.redrawTextEntity(this.textEntity, options)) { return; }
+        if (this.textEntity) { SXR.removeEntity(this.textEntity); }
+        const textEntity = SXR.createTextEntity(options);
         this.textEntity = textEntity;
         textEntity.setAttribute('position', `${textEntityX + textWidth / 2} 0 0.05`);
         this.el.appendChild(textEntity);
@@ -170,6 +214,7 @@ AFRAME.registerPrimitive( 'a-sxr-radio', {
         'value': 'sxr-radio.value',
         'active': 'sxr-radio.active',
         'checked': 'sxr-radio.checked',
+        'group': 'sxr-radio.group',
         'font-color': 'sxr-radio.fontColor',
         'font-size': 'sxr-radio.fontSize',
         'font-family': 'sxr-radio.fontFamily',

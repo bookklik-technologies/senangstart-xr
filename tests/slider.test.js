@@ -9,6 +9,10 @@ describe('slider component', () => {
         neutral: '#1B1B1F',
         secondary: '#0EA5E9',
       },
+      getActionFunction: (name) => {
+        const fn = window[name];
+        return (name && typeof fn === 'function') ? fn : null;
+      },
     };
     global.AFRAME = {
       registerComponent: jest.fn((name, definition) => {

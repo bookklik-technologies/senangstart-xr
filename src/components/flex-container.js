@@ -66,6 +66,45 @@ AFRAME.registerComponent('sxr-flex-container', {
 
     },
     init: function () {
+        // one MutationObserver per component instance; appended children
+        // trigger a debounced layout() instead of a full re-init
+        if (!this._mutationObserver) {
+            this._mutationObserver = onAppendChildToContainer(this.el, function (containerElement, addedNodes) {
+                const flexContainer = containerElement.components['sxr-flex-container'];
+                if (!flexContainer) { return; }
+                const addedChildren = [];
+                for (let i = 0; i < addedNodes.length; i++) {
+                    if (addedNodes[i].nodeType === 1) { addedChildren.push(addedNodes[i]); }
+                }
+                if (!addedChildren.length) { return; }
+                flexContainer._scheduleLayout(addedChildren);
+            });
+        }
+
+        this.layout();
+    },
+    // coalesce bursts of appended children into a single re-layout
+    _scheduleLayout: function (addedChildren) {
+        const flexContainer = this;
+        flexContainer._pendingChildren = (flexContainer._pendingChildren || []).concat(addedChildren);
+        if (flexContainer._layoutScheduled) { return; }
+        flexContainer._layoutScheduled = true;
+        setTimeout(function () {
+            flexContainer._layoutScheduled = false;
+            const pending = flexContainer._pendingChildren || [];
+            flexContainer._pendingChildren = [];
+            let shouldLayout = false;
+            pending.forEach(function (child) {
+                if (child.hasLoaded) {
+                    shouldLayout = true;
+                } else {
+                    child.addEventListener('loaded', function () { flexContainer.layout(); }, { once: true });
+                }
+            });
+            if (shouldLayout) { flexContainer.layout(); }
+        }, 0);
+    },
+    layout: function () {
         const containerGuiItem = this.el.getAttribute("sxr-item");
 
         if (this.data.isTopContainer) {
@@ -98,6 +137,7 @@ AFRAME.registerComponent('sxr-flex-container', {
                 for (let i = 0; i < this.children.length; i++) {
                     const childElement = this.children[i];
                     const childGuiItem = childElement.getAttribute("sxr-item");
+                    if (!childGuiItem) { continue; }
                     rowWidth = rowWidth + childGuiItem.margin.w + childGuiItem.width + childGuiItem.margin.y;
                 }
                 if (this.data.justifyContent === 'center') {
@@ -106,14 +146,7 @@ AFRAME.registerComponent('sxr-flex-container', {
                     cursorX = containerGuiItem.width - rowWidth;
                 }
             }
-            // then figure out baseline / cursor position on cross Y axis
-            if (this.data.alignItems === 'center') {
-                cursorY = containerGuiItem.height; // baseline is center
-            } else if (this.data.alignItems === 'flexStart') {
-                cursorY = 0; // baseline is top of container
-            } else if (this.data.alignItems === 'flexEnd') {
-                cursorY = containerGuiItem.height; // baseline is bottom of container
-            }
+            // cross-axis (Y) alignment is applied per child in the layout loop below
         } else if (this.data.flexDirection === 'column') {
             // first figure out cursor position on main Y axis
             if (this.data.justifyContent === 'flexStart') {
@@ -123,6 +156,7 @@ AFRAME.registerComponent('sxr-flex-container', {
                 for (let i = 0; i < this.children.length; i++) {
                     const childElement = this.children[i];
                     const childGuiItem = childElement.getAttribute("sxr-item");
+                    if (!childGuiItem) { continue; }
                     columnHeight = columnHeight + childGuiItem.margin.x + childGuiItem.height + childGuiItem.margin.z;
                 }
                 if (this.data.justifyContent === 'center') {
@@ -131,14 +165,7 @@ AFRAME.registerComponent('sxr-flex-container', {
                     cursorY = containerGuiItem.height - columnHeight;
                 }
             }
-            // then figure out baseline / cursor position on cross X axis
-            if (this.data.alignItems === 'flexStart') {
-                cursorX = 0; // baseline is left
-            } else if (this.data.alignItems === 'center') {
-                cursorX = containerGuiItem.width*0.5; // baseline is center
-            } else if (this.data.alignItems === 'flexEnd') {
-                cursorX = containerGuiItem.width * 0.5;
-            }
+            // cross-axis (X) alignment is applied per child in the layout loop below
         }
 
         // not that cursor positions are determined, loop through and lay out items
@@ -187,17 +214,17 @@ AFRAME.registerComponent('sxr-flex-container', {
             }
         }
 
-this._mutationObserver = onAppendChildToContainer(this.el, function(containerElement, addedChildren) {
-         addedChildren[0].addEventListener("loaded", () => {
-           containerElement.components['sxr-flex-container'].init();
-         })
-      })
-
     },
     remove: function () {
         if (this._mutationObserver) {
             this._mutationObserver.disconnect();
             this._mutationObserver = null;
+        }
+        this._layoutScheduled = false;
+        this._pendingChildren = [];
+        if (this.panelBackground) {
+            SXR.removeEntity(this.panelBackground);
+            this.panelBackground = null;
         }
     },
     setBackground: function () {

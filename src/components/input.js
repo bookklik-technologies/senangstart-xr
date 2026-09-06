@@ -2,11 +2,8 @@
 
 AFRAME.registerComponent('sxr-input', {
     schema: {
-        align: {type: 'string', default: 'left'},
         on: {default: 'click'},
         value: {type: 'string', default: ''},
-        toggle: {type: 'boolean', default: false},
-        toggleState: {type: 'boolean', default: false},
         fontSize: {type: 'number', default: 0.2},
         fontFamily: {type: 'string', default: SXR.fonts.default},
         fontColor: {type: 'string', default: SXR.colors.background},
@@ -14,15 +11,13 @@ AFRAME.registerComponent('sxr-input', {
         borderHoverColor: {type: 'string', default: SXR.colors.secondary},
         backgroundColor: {type: 'string', default: SXR.colors.onSurface},
         hoverColor: {type: 'string', default: SXR.colors.onSurface},
-        activeColor: {type: 'string', default: SXR.colors.primary},
     },
     init: function() {
 
         const data = this.data;
         const el = this.el;
         const guiItem = el.getAttribute("sxr-item");
-        this.guiItem = guiItem;        
-        this.checkedState = data.toggle;
+        this.guiItem = guiItem;
         this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
         const guiInteractable = el.getAttribute("sxr-interactable");
         this.guiInteractable = guiInteractable;
@@ -33,12 +28,12 @@ AFRAME.registerComponent('sxr-input', {
         const borderTopEntity = document.createElement("a-entity");
         borderTopEntity.setAttribute('geometry', `primitive: box; width: ${(guiItem.width)}; height: 0.05; depth: 0.02;`);
         borderTopEntity.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.borderColor}`);
-        borderTopEntity.setAttribute('position', `0 -${(guiItem.height/2)-0.025} 0.01`);
+        borderTopEntity.setAttribute('position', `0 ${(guiItem.height/2)-0.025} 0.01`);
         el.appendChild(borderTopEntity);
         const borderBottomEntity = document.createElement("a-entity");
         borderBottomEntity.setAttribute('geometry', `primitive: box; width: ${(guiItem.width)}; height: 0.05; depth: 0.02;`);
         borderBottomEntity.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.borderColor}`);
-        borderBottomEntity.setAttribute('position', `0 ${(guiItem.height/2)-0.025} 0.01`);
+        borderBottomEntity.setAttribute('position', `0 -${(guiItem.height/2)-0.025} 0.01`);
         el.appendChild(borderBottomEntity);
         const borderLeftEntity = document.createElement("a-entity");
         borderLeftEntity.setAttribute('geometry', `primitive: box; width: 0.05; height: ${(guiItem.height)}; depth: 0.02;`);
@@ -54,37 +49,47 @@ AFRAME.registerComponent('sxr-input', {
         this.setText(data.value);
 
         ////WAI ARIA Support
-        el.setAttribute('role', 'input');
+        el.setAttribute('role', 'textbox');
 
-        el.addEventListener('mouseenter', function () {
+        this._onMouseEnter = function () {
             el.setAttribute('material', 'color', data.hoverColor);
             borderTopEntity.setAttribute('material', 'color', data.borderHoverColor);
             borderBottomEntity.setAttribute('material', 'color', data.borderHoverColor);
             borderLeftEntity.setAttribute('material', 'color', data.borderHoverColor);
             borderRightEntity.setAttribute('material', 'color', data.borderHoverColor);
-        });
+        };
+        el.addEventListener('mouseenter', this._onMouseEnter);
 
-        el.addEventListener('mouseleave', function () {
+        this._onMouseLeave = function () {
             el.setAttribute('material', 'color', data.backgroundColor);
             borderTopEntity.setAttribute('material', 'color', data.borderColor);
             borderBottomEntity.setAttribute('material', 'color', data.borderColor);
             borderLeftEntity.setAttribute('material', 'color', data.borderColor);
             borderRightEntity.setAttribute('material', 'color', data.borderColor);
-        });
+        };
+        el.addEventListener('mouseleave', this._onMouseLeave);
 
-        el.addEventListener(data.on, function (evt) {
+        this._onClick = function (evt) {
             const guiInteractable = el.getAttribute("sxr-interactable");
-            const clickActionFunctionName = guiInteractable.clickAction;
-            // find object
-            const clickActionFunction = window[clickActionFunctionName];
-            // is object a function?
-            if (typeof clickActionFunction === "function") clickActionFunction(evt);
-        });
+            const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
+            if (clickActionFunction) clickActionFunction(evt);
+        };
+        el.addEventListener(data.on, this._onClick);
 
 
     },
+    remove: function () {
+        const el = this.el;
+        el.removeEventListener('mouseenter', this._onMouseEnter);
+        el.removeEventListener('mouseleave', this._onMouseLeave);
+        el.removeEventListener(this.data.on, this._onClick);
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
+    },
     setText: function (newText) {
-        const textEntity = SXR.createTextEntity({
+        const options = {
             value: newText,
             width: this.guiItem.width * 0.9,
             height: this.guiItem.height * 0.72,
@@ -92,15 +97,19 @@ AFRAME.registerComponent('sxr-input', {
             fontFamily: this.data.fontFamily,
             color: this.data.fontColor,
             align: 'left'
-        });
+        };
+        // per-keystroke redraws reuse the existing canvas/texture
+        if (this.textEntity && SXR.redrawTextEntity(this.textEntity, options)) { return; }
+        if (this.textEntity) { SXR.removeEntity(this.textEntity); }
+        const textEntity = SXR.createTextEntity(options);
         this.textEntity = textEntity;
         textEntity.setAttribute('position', `0 0 0.05`);
         this.el.appendChild(textEntity);
     },
     update: function (_oldData) {
-        const data = this.data;
-        SXR.removeEntity(this.textEntity);
-        this.setText(data.value);
+        if (this.textEntity) {
+            this.setText(this.data.value);
+        }
     },
     appendText(text) {
         const newText = this.data.value + text;

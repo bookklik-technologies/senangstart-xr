@@ -74,31 +74,62 @@ AFRAME.registerComponent('sxr-circle-timer', {
         this.timerRing = timerRing;
 
         this.initCount = data.countDown;
+        this._started = false;
+        this._startTime = 0;
+        this._lastSecond = null;
+        this._finished = false;
         this.setText(data.countDown);
 
     },
+    tick: function (time) {
+        const total = this.initCount;
+        if (!total || total <= 0 || this._finished) { return; }
+
+        if (!this._started) {
+            this._started = true;
+            this._startTime = time;
+        }
+
+        const elapsedSeconds = (time - this._startTime) / 1000;
+        const left = Math.max(0, total - elapsedSeconds);
+        const elapsedRatio = Math.min(1, elapsedSeconds / total);
+        const seconds = Math.ceil(left);
+
+        if (seconds !== this._lastSecond) {
+            this._lastSecond = seconds;
+            this.setText(seconds);
+        }
+
+        this.timerRing.setAttribute('theta-length', `${elapsedRatio * 360}`);
+
+        if (left <= 0) {
+            this._finished = true;
+            this.callback();
+        }
+    },
     update: function (oldData) {
         const data = this.data;
-        const el = this.el;
         if (Object.keys(oldData).length === 0) { return; }
         if (data.countDown !== oldData.countDown) {
-            el.getObject3D('mesh').material.color = data.backgroundColor;
-            const left = data.countDown,
-                count_down = this.initCount;
-            const elapsed = (Math.round(((count_down - left) * 100 ) / count_down) / 100) * 360;
-            this.timerRing.setAttribute('theta-length', elapsed); // this has to increase 0 to 360 when running the count_down
-
-            SXR.removeEntity(this.textEntity);
-            this.setText(data.countDown);
-
-            if(left === 1){
-                // fire callback on the last second
+            // restart the countdown with the new duration
+            this.initCount = data.countDown;
+            this._started = false;
+            this._startTime = 0;
+            this._lastSecond = null;
+            this._finished = false;
+            if (this.textEntity) {
+                this.setText(data.countDown);
             }
         }
     },
+    remove: function () {
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
+    },
     setText: function (newTime) {
-
-        const textEntity = SXR.createTextEntity({
+        const options = {
             value: newTime,
             width: this.guiItem.height * 0.7,
             height: this.guiItem.height * 0.38,
@@ -106,17 +137,20 @@ AFRAME.registerComponent('sxr-circle-timer', {
             fontFamily: this.data.fontFamily,
             color: this.data.fontColor,
             align: 'center'
-        });
+        };
+        // countdown ticks redraw the existing canvas instead of rebuilding
+        if (this.textEntity && SXR.redrawTextEntity(this.textEntity, options)) { return; }
+        if (this.textEntity) { SXR.removeEntity(this.textEntity); }
+        const textEntity = SXR.createTextEntity(options);
         this.textEntity = textEntity;
         textEntity.setAttribute('position', '0 0 0.05');
-        this.el.appendChild(textEntity);           
-     
+        this.el.appendChild(textEntity);
+
     },
     callback: function () {
         const guiInteractable = this.el.getAttribute("sxr-interactable");
-        const clickActionFunctionName = guiInteractable.clickAction;
-        const clickActionFunction = window[clickActionFunctionName];
-        if (typeof clickActionFunction === "function") clickActionFunction();
+        const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
+        if (clickActionFunction) clickActionFunction();
     }
 });
 

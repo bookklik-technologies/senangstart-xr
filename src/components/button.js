@@ -102,64 +102,71 @@ AFRAME.registerComponent('sxr-button', {
 
         this.setText(data.value);
 
-        el.addEventListener('mouseenter', function() {
+        this._onMouseEnter = function() {
             buttonEntity.removeAttribute('animation__leave');
             if (!(data.toggle)) {
                 buttonEntity.setAttribute('animation__enter', `property: material.color; from: ${data.backgroundColor}; to:${data.hoverColor}; dur:200;`);
             }
-        });
-        el.addEventListener('mouseleave', function() {
+        };
+        el.addEventListener('mouseenter', this._onMouseEnter);
+        this._onMouseLeave = function() {
             if (!(data.toggle)) {
                 buttonEntity.removeAttribute('animation__click');
                 buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
             }
             buttonEntity.removeAttribute('animation__enter');
-        });
+        };
+        el.addEventListener('mouseleave', this._onMouseLeave);
 
-      
-        el.addEventListener('focus', function() {
+
+        this._onFocus = function() {
             buttonContainer.setAttribute('material','color',`${data.focusColor}`);
-        });
+        };
 
-        el.addEventListener('blur', function() {
+        el.addEventListener('focus', this._onFocus);
+
+        this._onBlur = function() {
             buttonContainer.setAttribute('material','color', `${data.borderColor}`);
             if (!(data.toggle)) {
                 buttonEntity.removeAttribute('animation__click');
                 buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
             }
             buttonEntity.removeAttribute('animation__enter');
-        });      
+        };
+
+        el.addEventListener('blur', this._onBlur);
 
 
 
 
-        el.addEventListener(data.on, function(event) {
+        this._onActivate = function(event) {
             if (!(data.toggle)) { // if not toggling flashing active state
                 buttonEntity.setAttribute('animation__click', `property: material.color; from: ${data.activeColor}; to:${data.backgroundColor}; dur:400; easing: easeOutQuad;`);
             }else{
-                const guiButton = el.components['sxr-button']
-                guiButton.setActiveState(!guiButton.data.toggleState);
+                el.components['sxr-button'].setActiveState(!data.toggleState);
             }
 
-            const clickActionFunctionName = guiInteractable.clickAction;
-            const clickActionFunction = window[clickActionFunctionName];
-            if (typeof clickActionFunction === "function") clickActionFunction(event);
-        });
+            const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
+            if (clickActionFunction) clickActionFunction(event);
+        };
+
+        el.addEventListener(data.on, this._onActivate);
 
 
 
-        el.addEventListener("keyup", function (event){
+        this._onKeyUp = function (event){
           if (event.isComposing || event.keyCode === 229) {
              return;
           }
 
-          if (event.keyCode === 13 || event.keyCode === 32){
-              el.emit(data.on);            
+          if (event.key === 'Enter' || event.key === ' '){
+              event.preventDefault();
+              el.emit(data.on);
             }
-          event.preventDefault();
 
-        });          
-                  
+        };
+        el.addEventListener("keyup", this._onKeyUp);
+
           ////WAI ARIA Support
         el.setAttribute('role', 'button');
         el.setAttribute('tabindex','0');
@@ -168,99 +175,62 @@ AFRAME.registerComponent('sxr-button', {
 
 
     },
-    update: function (_oldData) {
+    remove: function () {
+        const el = this.el;
+        el.removeEventListener('mouseenter', this._onMouseEnter);
+        el.removeEventListener('mouseleave', this._onMouseLeave);
+        el.removeEventListener('focus', this._onFocus);
+        el.removeEventListener('blur', this._onBlur);
+        el.removeEventListener(this.data.on, this._onActivate);
+        el.removeEventListener('keyup', this._onKeyUp);
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
+    },
+    update: function (oldData) {
 
         const data = this.data;
         const el = this.el;
         const guiItem = el.getAttribute("sxr-item");
         this.guiItem = guiItem;
 
-        el.setAttribute('geometry', `primitive: plane; 
-                                     height: ${guiItem.height}; 
-                                     width: ${guiItem.width};
-                                     `);
-        el.setAttribute('material', `shader: flat; 
-                                     transparent: true; 
-                                     opacity: 0.5; 
-                                     side:double; 
-                                     color:${data.backgroundColor};
-                                     `);
+        const hasOld = oldData && Object.keys(oldData).length > 0;
 
-        if(guiItem.bevel){
-            const bevelsize_adjust = guiItem.bevelSize*1;
-            const bevelthickness_adjust = guiItem.bevelThickness;
-            this.buttonContainer.setAttribute('bevelbox', `width: ${guiItem.width-(guiItem.width*bevelsize_adjust)}; 
-                                                           height: ${guiItem.height-(guiItem.height*bevelsize_adjust)}; 
-                                                           depth: ${guiItem.baseDepth-(guiItem.baseDepth*bevelthickness_adjust)};
-                                                           bevelThickness: 0;
-                                                           bevelSize: ${guiItem.bevelSize};
-                                                           `);
-            this.buttonContainer.setAttribute('position', `0 0 0`);
-        }
-        else
-        {
-            this.buttonContainer.setAttribute('geometry', `primitive: box; 
-                                                       width: ${guiItem.width}; 
-                                                       height: ${guiItem.height}; 
-                                                       depth: ${guiItem.baseDepth};
-                                                       `);
-            this.buttonContainer.setAttribute('position', `0 0 ${guiItem.baseDepth/2}`);
-        }
-        this.buttonContainer.setAttribute('material', `shader: flat; 
-                                                       opacity: 1; 
-                                                       side:double; 
-                                                       color: ${data.borderColor}
-                                                       `);
-
-
-        if(guiItem.bevel){
-            const bevelsize_adjust = guiItem.bevelSize*1;
-            const bevelthickness_adjust = guiItem.bevelThickness;
-            this.buttonEntity.setAttribute('bevelbox', `width: ${(guiItem.width-guiItem.gap)-((guiItem.width-guiItem.gap)*bevelsize_adjust)}; 
-                                                        height: ${(guiItem.height-guiItem.gap)-((guiItem.height-guiItem.gap)*bevelsize_adjust)}; 
-                                                        depth: ${guiItem.depth-(guiItem.depth*bevelthickness_adjust)};
-                                                        bevelThickness: ${guiItem.bevelThickness};
-                                                        bevelSize: ${guiItem.bevelSize};
-                                                        `);
-            this.buttonEntity.setAttribute('position', `0 0 0`);
-        }
-        else
-        {
-            this.buttonEntity.setAttribute('geometry', `primitive: box; 
-                                               width: ${(guiItem.width-guiItem.gap)}; 
-                                               height: ${(guiItem.height-guiItem.gap)}; 
-                                               depth: ${guiItem.depth};
-                                               `);
-            this.buttonEntity.setAttribute('position', `0 0 ${guiItem.depth/2}`);
-        }
-        this.buttonEntity.setAttribute('material', `shader: flat; 
-                                                    opacity: 1; 
-                                                    side:double; 
+        // geometry depends only on sxr-item (handled in init); resting colors
+        // and the label are the only schema-driven visuals
+        this.buttonContainer.setAttribute('material', `shader: flat;
+                                                     opacity: 1;
+                                                     side:double;
+                                                     color: ${data.borderColor}
+                                                     `);
+        this.buttonEntity.setAttribute('material', `shader: flat;
+                                                    opacity: 1;
+                                                    side:double;
                                                     color: ${data.toggleState ? data.activeColor : data.backgroundColor}
                                                     `);
 
-        if(this.textEntity){
-
-            SXR.removeEntity(this.textEntity);
-
-            this.setText(this.data.value);
-   
+        const textKey = [data.value, data.fontSize, data.fontFamily, data.fontColor].join('|');
+        if (!hasOld || textKey !== this._lastTextKey) {
+            this._lastTextKey = textKey;
+            el.setAttribute('aria-label', data.value);
+            if (this.textEntity) {
+                this.setText(this.data.value);
+            }
         }
 
     },
     setActiveState: function (activeState) {
-        this.data.toggleState = activeState;
-        if (!activeState) {
-            this.buttonEntity.setAttribute('material', 'color', this.data.backgroundColor);
-        } else {
-            this.buttonEntity.setAttribute('material', 'color', this.data.activeColor);
-        }
+        // drives update(), which re-renders with the correct resting color;
+        // set here too so the color applies instantly without a full rebuild
+        this.el.setAttribute('sxr-button', 'toggleState', String(activeState));
+        this.buttonEntity.setAttribute('material', 'color', activeState ? this.data.activeColor : this.data.backgroundColor);
     },
     setText: function (newText) {
         const data = this.data;
         const el = this.el;
         const guiItem = el.getAttribute("sxr-item");
-        const textEntity = SXR.createTextEntity({
+        const options = {
             value: newText,
             width: guiItem.width / 1.12,
             height: guiItem.height * 0.78,
@@ -268,10 +238,15 @@ AFRAME.registerComponent('sxr-button', {
             fontFamily: data.fontFamily,
             color: data.fontColor,
             align: 'center'
-        });
+        };
+        // redraw into the existing canvas when the box is unchanged
+        if (this.textEntity && SXR.redrawTextEntity(this.textEntity, options)) { return; }
+        if (this.textEntity) { SXR.removeEntity(this.textEntity); }
+
+        const textEntity = SXR.createTextEntity(options);
         this.textEntity = textEntity;
 
-        if(guiItem.bevel){         
+        if(guiItem.bevel){
             textEntity.setAttribute('position', `0 0 ${guiItem.depth+(guiItem.bevelThickness/2)+0.05}`);
         }else{
             textEntity.setAttribute('position', `0 0 ${(guiItem.depth/2)+0.05}`);
