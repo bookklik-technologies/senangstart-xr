@@ -5,3 +5,7 @@ node_modules/
 Thumbs.db
 coverage/
 artifacts/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/public/demo/senangstart-xr.min.js
+docs/public/demo/Outfit-Regular.ttf

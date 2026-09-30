@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SenangStart XR — Controls demo</title>
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+  <script src="senangstart-xr.min.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #161618; overflow: hidden; }
+    .hint {
+      position: fixed; left: 0; right: 0; bottom: 0; padding: 6px 10px;
+      font: 12px/1.4 system-ui, sans-serif; color: #94a3b8; text-align: center;
+      background: rgba(22,22,24,.75);
+    }
+  </style>
+</head>
+<body>
+  <a-scene background="color: #161618" vr-mode-ui="enabled: false">
+    <a-entity id="cameraRig" position="0 1.6 0">
+      <a-camera look-controls wasd-controls position="0 0 0">
+        <a-sxr-cursor id="cursor" fuse="true" fuse-timeout="800" design="ring"
+                      color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB">
+        </a-sxr-cursor>
+      </a-camera>
+    </a-entity>
+
+    <a-entity id="leftHand" laser-controls="hand: left"
+              raycaster="objects: [sxr-interactable]"></a-entity>
+    <a-entity id="rightHand" laser-controls="hand: right"
+              raycaster="objects: [sxr-interactable]"></a-entity>
+
+    <a-sxr-label id="readout" value="ready" width="3" height="0.4"
+                 position="0 1.9 -2.6" font-size="0.12"></a-sxr-label>
+
+    <a-sxr-flex-container flex-direction="column" justify-content="center"
+                          align-items="center" item-padding="0.08"
+                          opacity="1" width="2.2" height="2.4"
+                          panel-color="#202127" panel-rounded="0.08"
+                          position="-0.9 1.4 -2.6">
+      <a-sxr-label value="Buttons" font-size="0.1" height="0.3" width="1.6"></a-sxr-label>
+      <a-sxr-button width="1.6" height="0.4" value="Press me"
+                    onclick="onPress" key="b" background-color="#202127"></a-sxr-button>
+      <a-sxr-icon-button width="0.4" height="0.4" icon="cog-6-tooth"
+                         icon-active="check" onclick="onPress"></a-sxr-icon-button>
+      <a-sxr-icon-label-button width="1.6" height="0.4" icon="sparkles"
+                              value="Generate" font-size="0.09"
+                              onclick="onPress"></a-sxr-icon-label-button>
+      <a-sxr-button width="1.6" height="0.4" value="Latching" toggle="true"
+                    toggle-state="false" onclick="onToggle"></a-sxr-button>
+    </a-sxr-flex-container>
+
+    <a-sxr-flex-container flex-direction="column" justify-content="center"
+                          align-items="center" item-padding="0.08"
+                          opacity="1" width="2.2" height="2.4"
+                          panel-color="#202127" panel-rounded="0.08"
+                          position="0.9 1.4 -2.6">
+      <a-sxr-label value="Choices" font-size="0.1" height="0.3" width="1.6"></a-sxr-label>
+      <a-sxr-toggle width="1.2" height="0.36" value="Wi-Fi"
+                    onclick="onNamed"></a-sxr-toggle>
+      <a-sxr-toggle width="1.2" height="0.36" value="Bluetooth"
+                    active="false" onclick="onNamed"></a-sxr-toggle>
+      <a-sxr-radio group="quality" checked="true" value="Low"
+                   width="1.2" height="0.34" onclick="onRadio"></a-sxr-radio>
+      <a-sxr-radio group="quality" value="High"
+                   width="1.2" height="0.34" onclick="onRadio"></a-sxr-radio>
+    </a-sxr-flex-container>
+  </a-scene>
+
+  <div class="hint">Click, Tab + Enter, or use the shortcuts <b>b</b> and the arrow keys. Try the VR button for controllers.</div>
+
+  <script>
+    const readout = () => document.getElementById('readout')
+    const say = (msg) => readout().setAttribute('value', msg)
+
+    function onPress() { say('button activated') }
+    function onToggle(event) {
+      const btn = event.currentTarget || event.target
+      say('toggle: ' + (btn.getAttribute('toggle-state') === 'true' ? 'on' : 'off'))
+    }
+    function onNamed(event) {
+      const el = event.currentTarget || event.target
+      say(el.getAttribute('value') + ': ' + (el.getAttribute('checked') === 'true' ? 'on' : 'off'))
+    }
+    function onRadio(event) {
+      const el = event.currentTarget || event.target
+      say('quality: ' + el.getAttribute('value'))
+    }
+  </script>
+</body>
+</html>

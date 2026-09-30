@@ -1,15 +1,32 @@
 /**
- * Docs-drift test: every documented property in the README component tables
- * must exist in the schema (via the primitive mappings) with the documented
- * default value, and every overview-table primitive must be registered.
+ * Docs-drift test: every documented property in the documentation component
+ * tables must exist in the schema (via the primitive mappings) with the
+ * documented default value, and every overview-table primitive must be
+ * registered.
  *
- * This prevents the README/code drift class of bugs (audit findings D1/D2 and
+ * This prevents the docs/code drift class of bugs (audit findings D1/D2 and
  * the per-component default mismatches) from recurring.
+ *
+ * The canonical component reference now lives in the VitePress site under
+ * docs/components/: the overview table is in docs/components/index.md and each
+ * per-component property table is in its own page. This test reads those pages
+ * instead of the README.
  */
 const fs = require('fs');
 const path = require('path');
 
-const README_PATH = path.join(__dirname, '..', 'README.md');
+const COMPONENTS_DIR = path.join(__dirname, '..', 'docs', 'components');
+const OVERVIEW_PATH = path.join(COMPONENTS_DIR, 'index.md');
+
+function readDocPages() {
+  return fs
+    .readdirSync(COMPONENTS_DIR)
+    .filter((file) => file.endsWith('.md'))
+    .map((file) => ({
+      file,
+      text: fs.readFileSync(path.join(COMPONENTS_DIR, file), 'utf8')
+    }));
+}
 
 function normalizeActual(defaultValue) {
   if (defaultValue === undefined || defaultValue === null) { return ''; }
@@ -28,7 +45,7 @@ function normalizeReadme(cell) {
   return value;
 }
 
-describe('README ↔ schema consistency', () => {
+describe('docs ↔ schema consistency', () => {
   const registry = {};
   const primitives = {};
 
@@ -63,8 +80,8 @@ describe('README ↔ schema consistency', () => {
     });
 
   test('every overview-table entry registers its documented primitive', () => {
-    const readme = fs.readFileSync(README_PATH, 'utf8');
-    const rows = readme.split('\n')
+    const overview = fs.readFileSync(OVERVIEW_PATH, 'utf8');
+    const rows = overview.split('\n')
       .map((line) => line.split('|').map((cell) => cell.trim()))
       .filter((cells) => cells.length >= 4 && /^sxr-/.test(cells[1]));
 
@@ -73,7 +90,9 @@ describe('README ↔ schema consistency', () => {
     const problems = [];
     rows.forEach((cells) => {
       const componentName = cells[1];
-      const primitiveName = cells[2];
+      // "<none>" is written as a code span in the docs so Vue does not parse it
+      // as an HTML tag; strip the backticks before comparing.
+      const primitiveName = cells[2].replace(/`/g, '');
       if (primitiveName === '<none>') { return; }
 
       const componentKey = findComponentKey(componentName);
@@ -99,76 +118,89 @@ describe('README ↔ schema consistency', () => {
   });
 
   test('every documented property exists in the schema with the documented default', () => {
-    const readme = fs.readFileSync(README_PATH, 'utf8');
-    const sectionPattern = /### (a-sxr-[a-z-]+) Component\n([\s\S]*?)(?=\n### |\n## |$)/g;
+    // Each component page carries a "### a-sxr-<name> Component" heading
+    // followed by a "#### Properties" table in the same shape as before.
+    // The section runs until the next markdown heading or the end of the page.
+    // NOTE: use the absolute-end anchor Z rather than $, which under the /m
+    // flag would match at every line end and truncate sections before their
+    // tables (making the test pass vacuously).
+    const sectionPattern = /^### (a-sxr-[a-z-]+) Component\r?\n([\s\S]*?)(?=\n#{1,6} |Z)/gm;
 
     const problems = [];
-    let match;
-    while ((match = sectionPattern.exec(readme)) !== null) {
-      const headingPrimitive = match[1];
-      const sectionText = match[2];
+    let sectionsFound = 0;
+    readDocPages().forEach(({ file, text }) => {
+      let match;
+      sectionPattern.lastIndex = 0;
+      while ((match = sectionPattern.exec(text)) !== null) {
+        sectionsFound += 1;
+        const headingPrimitive = match[1];
+        const sectionText = match[2];
 
-      const componentKey = findComponentKey(headingPrimitive);
-      if (!componentKey) {
-        problems.push(`${headingPrimitive}: no registered component matches this heading`);
-        continue;
+        const componentKey = findComponentKey(headingPrimitive);
+        if (!componentKey) {
+          problems.push(`${file}: "${headingPrimitive}": no registered component matches this heading`);
+          continue;
+        }
+        const primitiveName = findPrimitiveFor(componentKey);
+        if (!primitiveName) {
+          problems.push(`${file}: "${headingPrimitive}": no primitive registers "${componentKey}"`);
+          continue;
+        }
+        const mappings = primitives[primitiveName].mappings || {};
+
+        const tableRows = sectionText.split('\n')
+          .filter((line) => line.trim().startsWith('|'))
+          .map((line) => line.split('|').map((cell) => cell.trim()))
+          .filter((cells) => cells.length >= 4);
+
+        tableRows.forEach((cells) => {
+          const propertyName = cells[1];
+          const documentedDefault = cells[3] || '';
+          if (!propertyName || propertyName === 'Property' || /^-+$/.test(propertyName)) { return; }
+
+          const mapping = mappings[propertyName];
+          if (!mapping) {
+            problems.push(
+              `${file}: "${headingPrimitive}": property "${propertyName}" is documented but has no primitive mapping`
+            );
+            return;
+          }
+
+          const dot = mapping.lastIndexOf('.');
+          const targetComponentName = mapping.slice(0, dot);
+          const targetProperty = mapping.slice(dot + 1);
+          const targetComponent = registry[targetComponentName];
+          if (!targetComponent) {
+            // e.g. the A-Frame built-in "cursor" component — cannot verify here
+            return;
+          }
+          const schemaEntry = targetComponent.schema && targetComponent.schema[targetProperty];
+          if (!schemaEntry) {
+            problems.push(
+              `${file}: "${headingPrimitive}": "${propertyName}" maps to "${mapping}" but "${targetProperty}" ` +
+              `is not in the ${targetComponentName} schema`
+            );
+            return;
+          }
+
+          const actual = normalizeActual(schemaEntry.default);
+          const expected = normalizeReadme(documentedDefault);
+          const bothNumeric = /^-?\d+(\.\d+)?$/.test(actual) && /^-?\d+(\.\d+)?$/.test(expected);
+          const matches = bothNumeric
+            ? parseFloat(actual) === parseFloat(expected)
+            : actual === expected;
+          if (!matches) {
+            problems.push(
+              `${file}: "${headingPrimitive}": "${propertyName}" default documented as "${expected}" ` +
+              `but schema says "${actual}" (${mapping})`
+            );
+          }
+        });
       }
-      const primitiveName = findPrimitiveFor(componentKey);
-      if (!primitiveName) {
-        problems.push(`${headingPrimitive}: no primitive registers "${componentKey}"`);
-        continue;
-      }
-      const mappings = primitives[primitiveName].mappings || {};
+    });
 
-      const tableRows = sectionText.split('\n')
-        .filter((line) => line.trim().startsWith('|'))
-        .map((line) => line.split('|').map((cell) => cell.trim()))
-        .filter((cells) => cells.length >= 4);
-
-      tableRows.forEach((cells) => {
-        const propertyName = cells[1];
-        const documentedDefault = cells[3] || '';
-        if (!propertyName || propertyName === 'Property' || /^-+$/.test(propertyName)) { return; }
-
-        const mapping = mappings[propertyName];
-        if (!mapping) {
-          problems.push(
-            `${headingPrimitive}: property "${propertyName}" is documented but has no primitive mapping`
-          );
-          return;
-        }
-
-        const dot = mapping.lastIndexOf('.');
-        const targetComponentName = mapping.slice(0, dot);
-        const targetProperty = mapping.slice(dot + 1);
-        const targetComponent = registry[targetComponentName];
-        if (!targetComponent) {
-          // e.g. the A-Frame built-in "cursor" component — cannot verify here
-          return;
-        }
-        const schemaEntry = targetComponent.schema && targetComponent.schema[targetProperty];
-        if (!schemaEntry) {
-          problems.push(
-            `${headingPrimitive}: "${propertyName}" maps to "${mapping}" but "${targetProperty}" ` +
-            `is not in the ${targetComponentName} schema`
-          );
-          return;
-        }
-
-        const actual = normalizeActual(schemaEntry.default);
-        const expected = normalizeReadme(documentedDefault);
-        const bothNumeric = /^-?\d+(\.\d+)?$/.test(actual) && /^-?\d+(\.\d+)?$/.test(expected);
-        const matches = bothNumeric
-          ? parseFloat(actual) === parseFloat(expected)
-          : actual === expected;
-        if (!matches) {
-          problems.push(
-            `${headingPrimitive}: "${propertyName}" default documented as "${expected}" ` +
-            `but schema says "${actual}" (${mapping})`
-          );
-        }
-      });
-    }
+    // Guard against the pattern silently matching nothing after a refactor.
+    expect(sectionsFound).toBeGreaterThanOrEqual(14);
 
     expect(problems).toEqual([]);
   });

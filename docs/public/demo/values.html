@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SenangStart XR — Values and progress demo</title>
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+  <script src="senangstart-xr.min.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #161618; overflow: hidden; }
+    .hint {
+      position: fixed; left: 0; right: 0; bottom: 0; padding: 6px 10px;
+      font: 12px/1.4 system-ui, sans-serif; color: #94a3b8; text-align: center;
+      background: rgba(22,22,24,.75);
+    }
+  </style>
+</head>
+<body>
+  <a-scene background="color: #161618" vr-mode-ui="enabled: false">
+    <a-entity id="cameraRig" position="0 1.6 0">
+      <a-camera look-controls wasd-controls position="0 0 0">
+        <a-sxr-cursor id="cursor" fuse="true" fuse-timeout="800" design="ring"
+                      color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB">
+        </a-sxr-cursor>
+      </a-camera>
+    </a-entity>
+
+    <a-entity id="leftHand" laser-controls="hand: left"
+              raycaster="objects: [sxr-interactable]"></a-entity>
+    <a-entity id="rightHand" laser-controls="hand: right"
+              raycaster="objects: [sxr-interactable]"></a-entity>
+
+    <!-- Left column: sliders and input -->
+    <a-sxr-flex-container flex-direction="column" justify-content="center"
+                          align-items="center" item-padding="0.1"
+                          opacity="1" width="2.4" height="2.6"
+                          panel-color="#202127" panel-rounded="0.08"
+                          position="-1 1.4 -2.6">
+      <a-sxr-label value="Sliders &amp; input" font-size="0.1"
+                   height="0.3" width="2"></a-sxr-label>
+
+      <a-sxr-label id="hvalue" value="50%" font-size="0.08"
+                   height="0.24" width="1.6"></a-sxr-label>
+      <a-sxr-slider width="1.8" height="0.5" percent="0.5"
+                    onclick="onHorizontal"></a-sxr-slider>
+
+      <a-sxr-vertical-slider id="vslider" width="0.5" height="1.4" percent="0.65"
+                            output-function="toDegrees"
+                            onclick="onVertical"></a-sxr-vertical-slider>
+
+      <a-sxr-input id="field" width="1.8" height="0.4"
+                   native-editing="true" value="Click to type"></a-sxr-input>
+    </a-sxr-flex-container>
+
+    <!-- Right column: progress and timers -->
+    <a-sxr-flex-container flex-direction="column" justify-content="center"
+                          align-items="center" item-padding="0.1"
+                          opacity="1" width="2.4" height="2.6"
+                          panel-color="#202127" panel-rounded="0.08"
+                          position="1 1.4 -2.6">
+      <a-sxr-label value="Progress" font-size="0.1"
+                   height="0.3" width="2"></a-sxr-label>
+
+      <a-sxr-progressbar id="bar" width="1.8" height="0.2" percent="0.35"></a-sxr-progressbar>
+      <a-sxr-circle-loader id="loader" width="0.8" height="0.8" loaded="0.35"></a-sxr-circle-loader>
+      <a-sxr-circle-timer id="timer" width="0.9" height="0.9" count-down="15"
+                          callback="onExpired"></a-sxr-circle-timer>
+      <a-sxr-button width="1.6" height="0.36" value="Run / Pause"
+                    onclick="toggleRun"></a-sxr-button>
+    </a-sxr-flex-container>
+  </a-scene>
+
+  <div class="hint">Drag the sliders, arrow-key them when focused, click the field to type. The meter loops while running.</div>
+
+  <script>
+    const $ = (id) => document.getElementById(id)
+    let running = true
+
+    function onHorizontal(event, percent) {
+      $('hvalue').setAttribute('value', Math.round(percent * 100) + '%')
+    }
+    function onVertical(percent) {
+      $('hvalue').setAttribute('value', Math.round(percent * 360) + '°')
+    }
+    function toDegrees(percent) {
+      return Math.round(percent * 360) + '°'
+    }
+    function onExpired() {
+      $('bar').setAttribute('percent', '1')
+      $('loader').setAttribute('loaded', '1')
+    }
+    function toggleRun() {
+      running = !running
+      $('timer').setAttribute('count-down', running ? '15' : '0')
+    }
+
+    // Simple demo loop: sweep the meter back and forth.
+    let phase = 0
+    setInterval(() => {
+      if (!running) { return }
+      phase += 0.01
+      if (phase > 1) { phase = 0 }
+      $('bar').setAttribute('percent', String(phase))
+      $('loader').setAttribute('loaded', String(phase))
+    }, 80)
+  </script>
+</body>
+</html>

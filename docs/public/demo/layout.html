@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SenangStart XR — Layout demo</title>
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+  <script src="senangstart-xr.min.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #161618; overflow: hidden; }
+    .hint {
+      position: fixed; left: 0; right: 0; bottom: 0; padding: 6px 10px;
+      font: 12px/1.4 system-ui, sans-serif; color: #94a3b8; text-align: center;
+      background: rgba(22,22,24,.75);
+    }
+  </style>
+</head>
+<body>
+  <a-scene background="color: #161618" vr-mode-ui="enabled: false">
+    <a-entity id="cameraRig" position="0 1.6 0">
+      <a-camera look-controls wasd-controls position="0 0 0">
+        <a-sxr-cursor id="cursor" fuse="true" fuse-timeout="800" design="ring"
+                      color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB">
+        </a-sxr-cursor>
+      </a-camera>
+    </a-entity>
+
+    <!-- Column panel, themed through inheritance -->
+    <a-sxr-flex-container id="panel" flex-direction="column"
+                          justify-content="center" align-items="center"
+                          item-padding="0.12" opacity="1" width="2.4" height="3"
+                          panel-color="#202127" panel-rounded="0.12"
+                          position="0 1.5 -2.8"
+                          font-family="Outfit-Regular.ttf"
+                          font-color="#F1F5F9"
+                          background-color="#202127"
+                          hover-color="#0EA5E9"
+                          active-color="#2563EB">
+      <a-sxr-label value="Inherited styles" font-size="0.1"
+                   height="0.3" width="2"></a-sxr-label>
+      <a-sxr-button width="1.8" height="0.42" value="Uses panel theme"></a-sxr-button>
+      <a-sxr-toggle width="1.2" height="0.36" value="Also themed"></a-sxr-toggle>
+      <a-sxr-button width="1.8" height="0.42" value="Adds a child…"
+                    onclick="addChild"></a-sxr-button>
+    </a-sxr-flex-container>
+
+    <!-- Row panel, a second theme to show scoping -->
+    <a-sxr-flex-container flex-direction="row" justify-content="center"
+                          align-items="center" item-padding="0.12"
+                          opacity="1" width="2.6" height="0.8"
+                          panel-color="#072B73" panel-rounded="0.1"
+                          position="0 0.7 -2.8"
+                          font-color="#F1F5F9" hover-color="#10B981"
+                          active-color="#059669">
+      <a-sxr-label value="Row theme" font-size="0.1" width="1.1" height="0.3"></a-sxr-label>
+      <a-sxr-icon-button width="0.4" height="0.4" icon="star"></a-sxr-icon-button>
+      <a-sxr-icon-button width="0.4" height="0.4" icon="heart"></a-sxr-icon-button>
+    </a-sxr-flex-container>
+  </a-scene>
+
+  <div class="hint">Adding a child relayouts the column automatically. The two panels scope different themes.</div>
+
+  <script>
+    let added = false
+    function addChild() {
+      const panel = document.getElementById('panel')
+      if (added) { return }
+      added = true
+      const slider = document.createElement('a-sxr-slider')
+      slider.setAttribute('width', '1.8')
+      slider.setAttribute('height', '0.5')
+      slider.setAttribute('percent', '0.4')
+      panel.appendChild(slider)
+    }
+  </script>
+</body>
+</html>
