@@ -5,7 +5,7 @@
   <title>SenangStart XR - Component Showcase</title>
   <meta name="description" content="A complete SenangStart XR component showcase for A-Frame and WebXR">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="js/senangstart-xr.js?v=20260930-transparent-controls"></script>
+  <script src="js/senangstart-xr.js?v=20260930-radio-zoom"></script>
   <script>
     const DEMO_FONT = '../Outfit-Regular.ttf';
 
@@ -36,12 +36,8 @@
 
     function setStatus(message) {
       const status = document.querySelector('#statusText');
-      const log = document.querySelector('#activityLog');
       if (status) {
         status.setAttribute('value', message);
-      }
-      if (log) {
-        log.setAttribute('value', `Last event: ${message}`);
       }
     }
 
@@ -91,7 +87,7 @@
     }
 
     function onInputEdit(evt) {
-      setMetric('#clickMetric', `Input: ${evt.detail ? evt.detail.value : ''}`);
+      setStatus(`Editing: ${evt.detail ? evt.detail.value : ''}`);
     }
 
     function onInputCommit(evt) {
@@ -110,10 +106,6 @@
       setStatus(`Vertical slider set to ${state.vertical}%`);
     }
 
-    function onVerticalHover(percent) {
-      setMetric('#hoverMetric', `Hover ${Math.round(percent * 100)}%`);
-    }
-
     function formatPercent(percent) {
       return `${Math.round(percent * 100)}%`;
     }
@@ -124,8 +116,11 @@
       if (loader) {
         loader.setAttribute('loaded', state.progress.toFixed(2));
       }
+      const progressBar = document.querySelector('#linearProgress');
+      if (progressBar) {
+        progressBar.setAttribute('percent', state.progress.toFixed(2));
+      }
       setMetric('#progressMetric', `Progress ${Math.round(state.progress * 100)}%`);
-      setStatus('Circle loader value updated');
     }
 
     function tickTimer() {
@@ -155,7 +150,6 @@
     window.onInputClick = onInputClick;
     window.onSlide = onSlide;
     window.onVerticalSlide = onVerticalSlide;
-    window.onVerticalHover = onVerticalHover;
     window.formatPercent = formatPercent;
     window.cycleProgress = cycleProgress;
 
@@ -308,6 +302,11 @@
         line-height="0.19"
         text-depth="0.03"
         margin="0.08 0 0.02 0"></a-sxr-label>
+
+      <a-sxr-label id="clickMetric" width="2.8" height="0.28"
+        value="Clicks 0"
+        font-color="#F1F5F9" font-size="0.13" line-height="0.17"
+        opacity="0" margin="0.04 0 0 0"></a-sxr-label>
     </a-sxr-flex-container>
 
     <a-sxr-flex-container
@@ -396,45 +395,68 @@
         handle-color="#F1F5F9"
         margin="0.06 0 0.06 0"></a-sxr-toggle>
 
-      <a-sxr-radio width="2.9" height="0.48"
-        value="Comfort radio option"
-        onclick="onRadioComfort"
-        font-size="0.15"
-        background-color="#F1F5F9"
-        border-color="#1B1B1F"
-        hover-color="#0EA5E9"
-        active-color="#2563EB"
-        margin="0.06 0 0.04 0"></a-sxr-radio>
+      <a-sxr-flex-container
+        id="viewModeGroup"
+        role="radiogroup"
+        aria-label="View mode — choose one"
+        flex-direction="column"
+        justify-content="center"
+        align-items="center"
+        width="3.05"
+        height="1.4"
+        opacity="0"
+        margin="0.04 0 0.04 0">
 
-      <a-sxr-radio width="2.9" height="0.48"
-        value="Focus radio option"
-        onclick="onRadioFocus"
-        font-size="0.15"
-        background-color="#F1F5F9"
-        border-color="#1B1B1F"
-        hover-color="#0EA5E9"
-        active-color="#2563EB"
-        margin="0.04 0 0.07 0"></a-sxr-radio>
+        <a-sxr-label width="2.9" height="0.24"
+          value="View mode: choose one (arrow keys)"
+          font-color="#F1F5F9"
+          font-size="0.12"
+          opacity="0"
+          margin="0 0 0.04 0"></a-sxr-label>
 
-      <a-sxr-label id="activityLog"
-        width="2.9"
-        height="0.5"
-        value="Last event: ready"
-        align="left"
-        anchor="left"
-        font-color="#F1F5F9"
-        background-color="#161618"
-        opacity="0.85"
-        font-size="0.13"
-        text-depth="0.03"
-        margin="0.08 0 0.02 0"></a-sxr-label>
+        <a-sxr-radio id="radioComfort" width="2.9" height="0.48"
+          group="view-mode"
+          checked="true"
+          value="Comfort"
+          onclick="onRadioComfort"
+          font-size="0.15"
+          background-color="#F1F5F9"
+          border-color="#1B1B1F"
+          hover-color="#0EA5E9"
+          active-color="#2563EB"
+          margin="0.02 0 0.02 0"></a-sxr-radio>
+
+        <a-sxr-radio id="radioFocus" width="2.9" height="0.48"
+          group="view-mode"
+          value="Focus"
+          onclick="onRadioFocus"
+          font-size="0.15"
+          background-color="#F1F5F9"
+          border-color="#1B1B1F"
+          hover-color="#0EA5E9"
+          active-color="#2563EB"
+          margin="0.02 0 0 0"></a-sxr-radio>
+      </a-sxr-flex-container>
+
+      <a-sxr-flex-container
+        flex-direction="row" justify-content="center" align-items="center"
+        width="3.05" height="0.34" item-padding="0.12" opacity="0"
+        margin="0.04 0 0.02 0">
+        <a-sxr-label id="modeMetric" width="1.4" height="0.3"
+          value="Mode Orbit" font-size="0.12" line-height="0.16"
+          font-color="#F1F5F9" opacity="0"></a-sxr-label>
+        <a-sxr-label id="radioMetric" width="1.4" height="0.3"
+          value="Comfort selected" font-size="0.12" line-height="0.16"
+          font-color="#F1F5F9" opacity="0"></a-sxr-label>
+      </a-sxr-flex-container>
     </a-sxr-flex-container>
 
     <a-sxr-flex-container
       id="metersPanel"
       flex-direction="column"
-      justify-content="flexStart"
+      justify-content="center"
       align-items="center"
+      item-padding="0.08"
       opacity=".5"
       width="3.65"
       height="4.75"
@@ -443,184 +465,81 @@
       panel-rounded="0.18"
       position="3.75 1.7 0">
 
-      <a-sxr-label width="3.15" height="0.5"
+      <a-sxr-label width="3.1" height="0.38"
         value="Meters + Sliders"
-        font-color="#F1F5F9"
-        background-color="#202127"
-        opacity="0"
-        font-size="0.25"
-        margin="0 0 0 0"></a-sxr-label>
+        font-color="#F1F5F9" font-size="0.25"
+        opacity="0"></a-sxr-label>
 
+      <!-- Each meter has its own caption, directly above the control. -->
       <a-sxr-flex-container
-        flex-direction="row"
-        justify-content="center"
-        align-items="center"
-        width="3.15"
-        height="0.98"
-        opacity="0"
-        margin="0.02 0 0.02 0">
-
-        <a-sxr-circle-loader id="circleLoader"
-          width="0.86"
-          height="0.86"
-          loaded="0.75"
-          active-color="#2563EB"
-          background-color="#161618"
-          font-color="#F1F5F9"
-          font-size="0.2"
-          margin="0 0.12 0 0"></a-sxr-circle-loader>
-
-        <a-sxr-circle-timer id="circleTimer"
-          width="0.86"
-          height="0.86"
-          count-down="12"
-          active-color="#0EA5E9"
-          border-color="#1B1B1F"
-          background-color="#161618"
-          font-color="#F1F5F9"
-          font-size="0.22"
-          margin="0 0.18 0 0.12"></a-sxr-circle-timer>
-
-        <a-sxr-progressbar
-          width="0.78"
-          height="0.2"
-          background-color="#161618"
-          active-color="#2563EB"
-          percent="0.8"
-          margin="0 0 0 0.08"></a-sxr-progressbar>
-      </a-sxr-flex-container>
-
-      <a-sxr-slider width="2.95" height="0.42"
-        percent="0.5"
-        onclick="onSlide"
-        background-color="#F1F5F9"
-        border-color="#1B1B1F"
-        active-color="#2563EB"
-        handle-color="#F1F5F9"
-        hover-color="#0EA5E9"
-        margin="0 0 0 0"></a-sxr-slider>
-
-      <a-sxr-flex-container
-        flex-direction="row"
-        justify-content="center"
-        align-items="flexStart"
-        width="3.0"
-        height="1.36"
-        opacity="0"
-        margin="0.04 0 0.06 0">
-
-        <a-sxr-vertical-slider width="0.66" height="1.24"
-          percent="0.68"
-          onclick="onVerticalSlide"
-          onhover="onVerticalHover"
-          output-function="formatPercent"
-          active-color="#2563EB"
-          background-color="#161618"
-          border-color="#1B1B1F"
-          handle-color="#F1F5F9"
-          hover-color="#0EA5E9"
-          opacity="0.9"
-          margin="0.02 0.16 0 0"></a-sxr-vertical-slider>
+        flex-direction="row" justify-content="center" align-items="center"
+        width="3.1" height="1.22" item-padding="0.24" opacity="0">
 
         <a-sxr-flex-container
-          flex-direction="column"
-          justify-content="flexStart"
-          align-items="flexStart"
-          width="2.12"
-          height="1.24"
-          opacity="0"
-          margin="0.02 0 0 0.16">
+          flex-direction="column" justify-content="center" align-items="center"
+          width="1.3" height="1.22" item-padding="0.06" opacity="0">
+          <a-sxr-label width="1.3" height="0.28"
+            value="Loading (%)" font-color="#F1F5F9"
+            font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
+          <a-sxr-circle-loader id="circleLoader"
+            width="0.8" height="0.8" loaded="0.64"
+            active-color="#2563EB" background-color="#161618"
+            font-color="#F1F5F9" font-size="0.2"></a-sxr-circle-loader>
+        </a-sxr-flex-container>
 
-          <a-sxr-label id="clickMetric" width="2.0" height="0.19"
-            value="Clicks 0"
-            align="left"
-            anchor="left"
-            font-color="#F1F5F9"
-            background-color="#202127"
-            opacity="0"
-            font-size="0.105"
-            margin="0 0 0.015 0.04"></a-sxr-label>
-
-          <a-sxr-label id="modeMetric" width="2.0" height="0.19"
-            value="Mode Orbit"
-            align="left"
-            anchor="left"
-            font-color="#F1F5F9"
-            background-color="#202127"
-            opacity="0"
-            font-size="0.105"
-            margin="0.015 0 0.015 0.04"></a-sxr-label>
-
-          <a-sxr-label id="radioMetric" width="2.0" height="0.19"
-            value="Radio awaiting"
-            align="left"
-            anchor="left"
-            font-color="#F1F5F9"
-            background-color="#202127"
-            opacity="0"
-            font-size="0.105"
-            margin="0.015 0 0.015 0.04"></a-sxr-label>
-
-          <a-sxr-label id="sliderMetric" width="2.0" height="0.19"
-            value="Horizontal 42%"
-            align="left"
-            anchor="left"
-            font-color="#F1F5F9"
-            background-color="#202127"
-            opacity="0"
-            font-size="0.105"
-            margin="0.015 0 0.015 0.04"></a-sxr-label>
-
-          <a-sxr-label id="verticalMetric" width="2.0" height="0.19"
-            value="Vertical 68%"
-            align="left"
-            anchor="left"
-            font-color="#F1F5F9"
-            background-color="#202127"
-            opacity="0"
-            font-size="0.105"
-            margin="0.015 0 0.015 0.04"></a-sxr-label>
-
-          <a-sxr-label id="hoverMetric" width="2.0" height="0.19"
-            value="Hover --"
-            align="left"
-            anchor="left"
-            font-color="#F1F5F9"
-            background-color="#202127"
-            opacity="0"
-            font-size="0.105"
-            margin="0.015 0 0 0.04"></a-sxr-label>
+        <a-sxr-flex-container
+          flex-direction="column" justify-content="center" align-items="center"
+          width="1.3" height="1.22" item-padding="0.06" opacity="0">
+          <a-sxr-label id="timerMetric" width="1.3" height="0.28"
+            value="Timer 12s" font-color="#F1F5F9"
+            font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
+          <a-sxr-circle-timer id="circleTimer"
+            width="0.8" height="0.8" count-down="12"
+            active-color="#0EA5E9" border-color="#1B1B1F"
+            background-color="#161618" font-color="#F1F5F9"
+            font-size="0.2"></a-sxr-circle-timer>
         </a-sxr-flex-container>
       </a-sxr-flex-container>
 
       <a-sxr-flex-container
-        flex-direction="row"
-        justify-content="center"
-        align-items="center"
-        width="3.0"
-        height="0.38"
-        opacity="0"
-        margin="0.07 0 0.08 0">
+        flex-direction="column" justify-content="center" align-items="center"
+        width="3.1" height="0.5" item-padding="0.04" opacity="0">
+        <a-sxr-label id="progressMetric" width="3.1" height="0.28"
+          value="Progress 64%" font-color="#F1F5F9"
+          font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
+        <a-sxr-progressbar id="linearProgress"
+          width="2.9" height="0.14" percent="0.64"
+          background-color="#161618" active-color="#2563EB"></a-sxr-progressbar>
+      </a-sxr-flex-container>
 
-        <a-sxr-label id="progressMetric" width="1.42" height="0.24"
-          value="Progress 64%"
-          align="left"
-          anchor="left"
-          font-color="#F1F5F9"
-          background-color="#202127"
-          opacity="0"
-          font-size="0.11"
-          margin="0 0.08 0 0"></a-sxr-label>
+      <a-sxr-flex-container
+        flex-direction="column" justify-content="center" align-items="center"
+        width="3.1" height="0.66" item-padding="0.04" opacity="0">
+        <a-sxr-label id="sliderMetric" width="3.1" height="0.28"
+          value="Horizontal 42%" font-color="#F1F5F9"
+          font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
+        <a-sxr-slider width="2.9" height="0.32"
+          percent="0.42" onclick="onSlide"
+          background-color="#F1F5F9" border-color="#1B1B1F"
+          active-color="#2563EB" handle-color="#F1F5F9"
+          hover-color="#0EA5E9"></a-sxr-slider>
+      </a-sxr-flex-container>
 
-        <a-sxr-label id="timerMetric" width="1.42" height="0.24"
-          value="Timer 12s"
-          align="left"
-          anchor="left"
-          font-color="#F1F5F9"
-          background-color="#202127"
-          opacity="0"
-          font-size="0.11"
-          margin="0 0 0 0.08"></a-sxr-label>
+      <!-- Reserve the full row for the slider and its moving value/hover bubbles. -->
+      <a-sxr-flex-container
+        flex-direction="column" justify-content="center" align-items="center"
+        width="3.1" height="1.48" item-padding="0.06" opacity="0">
+        <a-sxr-label id="verticalMetric" width="3.1" height="0.28"
+          value="Vertical 68%" font-color="#F1F5F9"
+          font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
+        <a-sxr-vertical-slider width="0.56" height="1.12"
+          percent="0.68" onclick="onVerticalSlide"
+          output-function="formatPercent"
+          output-width="0.7" output-font-size="0.14" output-text-depth="0.03"
+          hover-font-size="0.12"
+          active-color="#2563EB" background-color="#161618"
+          border-color="#1B1B1F" handle-color="#F1F5F9"
+          hover-color="#0EA5E9" opacity="0.9"></a-sxr-vertical-slider>
       </a-sxr-flex-container>
     </a-sxr-flex-container>
 

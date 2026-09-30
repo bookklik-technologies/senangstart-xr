@@ -148,6 +148,8 @@ AFRAME.registerComponent('sxr-radio', {
         radioCenter.setAttribute('radius', guiItem.height*0.18*data.radiosizecoef);
         radioCenter.setAttribute('height', '0.02');
         radioCenter.setAttribute('rotation', '0 0 0');
+        // Scale the cylinder's face while keeping its depth above the backing.
+        radioCenter.setAttribute('scale', data.checked ? '1 1 1' : '0 1 0');
         radioCenter.setAttribute('material', `color:${data.handleColor}; shader: flat;`);
         radioBox.appendChild(radioCenter);
         this.radioCenter = radioCenter;
@@ -268,25 +270,18 @@ AFRAME.registerComponent('sxr-radio', {
         const data = this.data;
         const radioCenter = this.radioCenter;
         radioCenter.removeAttribute('animation__colorOut');
-        radioCenter.removeAttribute('animation__rotationOut');
-        radioCenter.removeAttribute('animation__position1Out');
-        radioCenter.removeAttribute('animation__position2Out');
-        radioCenter.setAttribute('animation__colorIn', `property: material.color; from: ${data.handleColor}; to:${data.activeColor}; dur:500; easing:easeInOutCubic;`);
-        radioCenter.setAttribute('animation__rotationIn', `property: rotation; from: 0 0 0; to:-180 0 0; dur:500; easing:easeInOutCubic;`);
-        radioCenter.setAttribute('animation__position1In', `property: position; from: 0 0 0; to:0 0.3 0; dur:200; easing:easeInOutCubic;`);
-        radioCenter.setAttribute('animation__position2In', `property: position; from: 0 0.3 0; to:0 0 0; dur:200; easing:easeInOutCubic; delay:300;`);
+        radioCenter.removeAttribute('animation__scaleOut');
+        // Omit "from" so a rapid selection change resumes at the current scale.
+        radioCenter.setAttribute('animation__colorIn', `property: material.color; to:${data.activeColor}; dur:200; easing:easeOutCubic;`);
+        radioCenter.setAttribute('animation__scaleIn', 'property: scale; to: 1 1 1; dur:200; easing:easeOutCubic;');
     },
     applyUncheckedVisuals: function () {
         const data = this.data;
         const radioCenter = this.radioCenter;
         radioCenter.removeAttribute('animation__colorIn');
-        radioCenter.removeAttribute('animation__rotationIn');
-        radioCenter.removeAttribute('animation__position1In');
-        radioCenter.removeAttribute('animation__position2In');
-        radioCenter.setAttribute('animation__colorOut', `property: material.color; from: ${data.activeColor}; to:${data.handleColor}; dur:500; easing:easeInOutCubic;`);
-        radioCenter.setAttribute('animation__rotationOut', `property: rotation; from: -180 0 0; to:0 0 0; dur:500; easing:easeInOutCubic;`);
-        radioCenter.setAttribute('animation__position1Out', `property: position; from: 0 0 0; to:0 0.3 0; dur:200; easing:easeInOutCubic; `);
-        radioCenter.setAttribute('animation__position2Out', `property: position; from: 0 0.3 0; to:0 0 0; dur:200; easing:easeInOutCubic; delay:300;`);
+        radioCenter.removeAttribute('animation__scaleIn');
+        radioCenter.setAttribute('animation__colorOut', `property: material.color; to:${data.handleColor}; dur:200; easing:easeOutCubic;`);
+        radioCenter.setAttribute('animation__scaleOut', 'property: scale; to: 0 1 0; dur:200; easing:easeOutCubic;');
     },
 
     updateToggle: function(active){
