@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-button', {
+    dependencies: ['sxr-item', 'sxr-interactable'],
     schema: {
         on: {default: 'click'},
         value: {type: 'string', default: ''},
@@ -14,13 +15,14 @@ AFRAME.registerComponent('sxr-button', {
         activeColor: {type: 'string', default: SXR.colors.primary},
         toggle: {type: 'boolean', default: false},
         toggleState: {type: 'boolean', default: false},
-    },     
+    },
 
-    init: function(){    
+    init: function(){
 
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
+        const component = this;
+        const guiItem = SXR.getItem(el);
         this.guiItem = guiItem;
 
         this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
@@ -28,110 +30,40 @@ AFRAME.registerComponent('sxr-button', {
         const guiInteractable = el.getAttribute("sxr-interactable");
         this.guiInteractable = guiInteractable;
 
-
-        el.setAttribute('geometry', `primitive: plane; 
-                                     height: ${guiItem.height}; 
-                                     width: ${guiItem.width};
-                                     `);
-        el.setAttribute('material', `shader: flat; 
-                                     transparent: true; 
-                                     opacity: 0.5; 
-                                     side:double; 
-                                     color:${data.backgroundColor};
-                                     `);
-
-        const buttonContainer = document.createElement("a-entity");
-
-        if(guiItem.bevel){
-            const bevelsize_adjust = guiItem.bevelSize*1;
-            const bevelthickness_adjust = guiItem.bevelThickness;
-            buttonContainer.setAttribute('bevelbox', `width: ${guiItem.width - (guiItem.width*bevelsize_adjust)}; 
-                                                      height: ${guiItem.height - (guiItem.height*bevelsize_adjust)}; 
-                                                      depth: ${guiItem.baseDepth - (guiItem.baseDepth*bevelthickness_adjust)};
-                                                      bevelThickness: 0;
-                                                      bevelSize: ${guiItem.bevelSize};
-                                                      `);
-            buttonContainer.setAttribute('position', `0 0 0`);
-        }
-        else
-        {
-            buttonContainer.setAttribute('geometry', `primitive: box; 
-                                                      width: ${guiItem.width}; 
-                                                      height: ${guiItem.height}; 
-                                                      depth: ${guiItem.baseDepth};
-                                                      `);
-            buttonContainer.setAttribute('position', `0 0 ${guiItem.baseDepth/2}`);
-        }
-        buttonContainer.setAttribute('rotation', '0 0 0');
-        buttonContainer.setAttribute('material', `shader: flat; 
-                                                  opacity: 1; 
-                                                  side:double; 
-                                                  color: ${data.borderColor}
-                                                  `);
-        el.appendChild(buttonContainer);
-        this.buttonContainer = buttonContainer;
-
-        const buttonEntity = document.createElement("a-entity");
-        if(guiItem.bevel){
-            const bevelsize_adjust = guiItem.bevelSize*1;
-            const bevelthickness_adjust = guiItem.bevelThickness;
-            buttonEntity.setAttribute('bevelbox', `width: ${(guiItem.width-guiItem.gap)-((guiItem.width-guiItem.gap)*bevelsize_adjust)}; 
-                                                   height: ${(guiItem.height-guiItem.gap)-((guiItem.height-guiItem.gap)*bevelsize_adjust)}; 
-                                                   depth: ${guiItem.depth-(guiItem.depth*bevelthickness_adjust)};
-                                                   bevelThickness: ${guiItem.bevelThickness};
-                                                   bevelSize: ${guiItem.bevelSize};
-                                                   `);
-            buttonEntity.setAttribute('position', `0 0 0`);
-        }
-        else
-        {
-            buttonEntity.setAttribute('geometry', `primitive: box; 
-                                               width: ${(guiItem.width-guiItem.gap)}; 
-                                               height: ${(guiItem.height-guiItem.gap)}; 
-                                               depth: ${guiItem.depth};`);
-            buttonEntity.setAttribute('position', `0 0 ${guiItem.depth/2}`);
-        }
-        buttonEntity.setAttribute('material', `shader: flat; 
-                                               opacity: 1; 
-                                               side:double; 
-                                               color: ${data.toggleState ? data.activeColor : data.backgroundColor}
-                                               `);
-        buttonEntity.setAttribute('rotation', '0 0 0');
-        el.appendChild(buttonEntity);
-        this.buttonEntity = buttonEntity;
+        this._buildGeometry();
 
         this.setText(data.value);
 
         this._onMouseEnter = function() {
-            buttonEntity.removeAttribute('animation__leave');
+            component.buttonEntity.removeAttribute('animation__leave');
             if (!(data.toggle)) {
-                buttonEntity.setAttribute('animation__enter', `property: material.color; from: ${data.backgroundColor}; to:${data.hoverColor}; dur:200;`);
+                component.buttonEntity.setAttribute('animation__enter', `property: material.color; from: ${data.backgroundColor}; to:${data.hoverColor}; dur:200;`);
             }
         };
         el.addEventListener('mouseenter', this._onMouseEnter);
         this._onMouseLeave = function() {
             if (!(data.toggle)) {
-                buttonEntity.removeAttribute('animation__click');
-                buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
+                component.buttonEntity.removeAttribute('animation__click');
+                component.buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
             }
-            buttonEntity.removeAttribute('animation__enter');
+            component.buttonEntity.removeAttribute('animation__enter');
         };
         el.addEventListener('mouseleave', this._onMouseLeave);
 
 
         this._onFocus = function() {
-            buttonContainer.setAttribute('material','color',`${data.focusColor}`);
+            component.buttonContainer.setAttribute('material','color',`${data.focusColor}`);
         };
 
         el.addEventListener('focus', this._onFocus);
 
         this._onBlur = function() {
-            buttonContainer.setAttribute('material','color', `${data.borderColor}`);
+            component.buttonContainer.setAttribute('material','color', `${data.borderColor}`);
             if (!(data.toggle)) {
-                buttonEntity.removeAttribute('animation__click');
-                buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
+                component.buttonEntity.removeAttribute('animation__click');
+                component.buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
             }
-            buttonEntity.removeAttribute('animation__enter');
+            component.buttonEntity.removeAttribute('animation__enter');
         };
 
         el.addEventListener('blur', this._onBlur);
@@ -141,9 +73,9 @@ AFRAME.registerComponent('sxr-button', {
 
         this._onActivate = function(event) {
             if (!(data.toggle)) { // if not toggling flashing active state
-                buttonEntity.setAttribute('animation__click', `property: material.color; from: ${data.activeColor}; to:${data.backgroundColor}; dur:400; easing: easeOutQuad;`);
+                component.buttonEntity.setAttribute('animation__click', `property: material.color; from: ${data.activeColor}; to:${data.backgroundColor}; dur:400; easing: easeOutQuad;`);
             }else{
-                el.components['sxr-button'].setActiveState(!data.toggleState);
+                component.setActiveState(!data.toggleState);
             }
 
             const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
@@ -154,18 +86,30 @@ AFRAME.registerComponent('sxr-button', {
 
 
 
+        // focused keyboard operation: Enter/Space activate. When the widget's
+        // own key/key-code shortcut already fired from the shared keydown
+        // registry, skip the keyup path to prevent duplicate activation.
         this._onKeyUp = function (event){
-          if (event.isComposing || event.keyCode === 229) {
+          if (event.isComposing || event.keyCode === 229 || event.repeat) {
              return;
           }
 
-          if (event.key === 'Enter' || event.key === ' '){
+          if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar'){
+              const interactable = el.components['sxr-interactable'];
+              if (interactable && interactable.matchesEvent && interactable.matchesEvent(event)) {
+                  return;
+              }
               event.preventDefault();
               el.emit(data.on);
             }
 
         };
         el.addEventListener("keyup", this._onKeyUp);
+
+        // live sxr-item updates (dimensions) rebuild the geometry + label
+        this._onItemChanged = SXR.watchGuiItem(el, function () {
+            component._rebuild();
+        });
 
           ////WAI ARIA Support
         el.setAttribute('role', 'button');
@@ -175,6 +119,108 @@ AFRAME.registerComponent('sxr-button', {
 
 
     },
+    _buildGeometry: function () {
+        const data = this.data;
+        const el = this.el;
+        const guiItem = this.guiItem || SXR.getItem(el);
+
+        el.setAttribute('geometry', `primitive: plane;
+                                     height: ${guiItem.height};
+                                     width: ${guiItem.width};
+                                     `);
+        el.setAttribute('material', `shader: flat;
+                                     transparent: true;
+                                     opacity: 0.5;
+                                     side:double;
+                                     color:${data.backgroundColor};
+                                     `);
+
+        const buttonContainer = document.createElement("a-entity");
+
+        if(guiItem.bevel){
+            const bevelsize_adjust = guiItem.bevelSize*1;
+            const bevelthickness_adjust = guiItem.bevelThickness;
+            buttonContainer.setAttribute('bevelbox', `width: ${guiItem.width - (guiItem.width*bevelsize_adjust)};
+                                                      height: ${guiItem.height - (guiItem.height*bevelsize_adjust)};
+                                                      depth: ${guiItem.baseDepth - (guiItem.baseDepth*bevelthickness_adjust)};
+                                                      bevelThickness: 0;
+                                                      bevelSize: ${guiItem.bevelSize};
+                                                      `);
+            buttonContainer.setAttribute('position', `0 0 0`);
+        }
+        else
+        {
+            buttonContainer.setAttribute('geometry', `primitive: box;
+                                                      width: ${guiItem.width};
+                                                      height: ${guiItem.height};
+                                                      depth: ${guiItem.baseDepth};
+                                                      `);
+            buttonContainer.setAttribute('position', `0 0 ${guiItem.baseDepth/2}`);
+        }
+        buttonContainer.setAttribute('rotation', '0 0 0');
+        buttonContainer.setAttribute('material', `shader: flat;
+                                                  opacity: 1;
+                                                  side:double;
+                                                  color: ${data.borderColor}
+                                                  `);
+        el.appendChild(buttonContainer);
+        this.buttonContainer = buttonContainer;
+
+        const buttonEntity = document.createElement("a-entity");
+        if(guiItem.bevel){
+            const bevelsize_adjust = guiItem.bevelSize*1;
+            const bevelthickness_adjust = guiItem.bevelThickness;
+            buttonEntity.setAttribute('bevelbox', `width: ${(guiItem.width-guiItem.gap)-((guiItem.width-guiItem.gap)*bevelsize_adjust)};
+                                                   height: ${(guiItem.height-guiItem.gap)-((guiItem.height-guiItem.gap)*bevelsize_adjust)};
+                                                   depth: ${guiItem.depth-(guiItem.depth*bevelthickness_adjust)};
+                                                   bevelThickness: ${guiItem.bevelThickness};
+                                                   bevelSize: ${guiItem.bevelSize};
+                                                   `);
+            buttonEntity.setAttribute('position', `0 0 0`);
+        }
+        else
+        {
+            buttonEntity.setAttribute('geometry', `primitive: box;
+                                               width: ${(guiItem.width-guiItem.gap)};
+                                               height: ${(guiItem.height-guiItem.gap)};
+                                               depth: ${guiItem.depth};`);
+            buttonEntity.setAttribute('position', `0 0 ${guiItem.depth/2}`);
+        }
+        buttonEntity.setAttribute('material', `shader: flat;
+                                               opacity: 1;
+                                               side:double;
+                                               color: ${data.toggleState ? data.activeColor : data.backgroundColor}
+                                               `);
+        buttonEntity.setAttribute('rotation', '0 0 0');
+        el.appendChild(buttonEntity);
+        this.buttonEntity = buttonEntity;
+    },
+    // dispose the owned geometry entities and rebuild from current sxr-item
+    // data; invoked on live dimension changes
+    _rebuild: function () {
+        const el = this.el;
+        const previousItemKey = this._itemKey;
+        this.guiItem = SXR.getItem(el);
+        const guiItem = this.guiItem;
+        this._itemKey = [guiItem.width, guiItem.height, guiItem.baseDepth, guiItem.depth, guiItem.gap, guiItem.bevel, guiItem.bevelSize, guiItem.bevelThickness, guiItem.bevelSegments, guiItem.bevelOffset, guiItem.steps, guiItem.radius].join('|');
+        if (previousItemKey !== undefined && previousItemKey === this._itemKey) { return; }
+
+        if (this.buttonContainer) { SXR.removeEntity(this.buttonContainer); }
+        if (this.buttonEntity) { SXR.removeEntity(this.buttonEntity); }
+        this.buttonContainer = null;
+        this.buttonEntity = null;
+        this._buildGeometry();
+        this.buttonEntity.setAttribute('material', `shader: flat;
+                                                    opacity: 1;
+                                                    side:double;
+                                                    color: ${this.data.toggleState ? this.data.activeColor : this.data.backgroundColor}
+                                                    `);
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+            this.setText(this.data.value);
+        }
+    },
     remove: function () {
         const el = this.el;
         el.removeEventListener('mouseenter', this._onMouseEnter);
@@ -183,22 +229,36 @@ AFRAME.registerComponent('sxr-button', {
         el.removeEventListener('blur', this._onBlur);
         el.removeEventListener(this.data.on, this._onActivate);
         el.removeEventListener('keyup', this._onKeyUp);
+        el.removeEventListener('componentchanged', this._onItemChanged);
         if (this.textEntity) {
             SXR.removeEntity(this.textEntity);
             this.textEntity = null;
+        }
+        if (this.buttonContainer) {
+            SXR.removeEntity(this.buttonContainer);
+            this.buttonContainer = null;
+        }
+        if (this.buttonEntity) {
+            SXR.removeEntity(this.buttonEntity);
+            this.buttonEntity = null;
         }
     },
     update: function (oldData) {
 
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
-        this.guiItem = guiItem;
+        this.guiItem = SXR.getItem(el);
 
         const hasOld = oldData && Object.keys(oldData).length > 0;
 
-        // geometry depends only on sxr-item (handled in init); resting colors
-        // and the label are the only schema-driven visuals
+        // rebind the activation listener when the event name changes
+        if (hasOld && data.on !== oldData.on) {
+            el.removeEventListener(oldData.on, this._onActivate);
+            el.addEventListener(data.on, this._onActivate);
+        }
+
+        // geometry depends only on sxr-item (handled via the item watcher);
+        // resting colors and the label are the only schema-driven visuals
         this.buttonContainer.setAttribute('material', `shader: flat;
                                                      opacity: 1;
                                                      side:double;
@@ -227,9 +287,10 @@ AFRAME.registerComponent('sxr-button', {
         this.buttonEntity.setAttribute('material', 'color', activeState ? this.data.activeColor : this.data.backgroundColor);
     },
     setText: function (newText) {
+        this.normalizedFontSize = SXR.normalizeFontSize(this.data.fontSize);
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
+        const guiItem = this.guiItem || SXR.getItem(el);
         const options = {
             value: newText,
             width: guiItem.width / 1.12,
@@ -267,6 +328,7 @@ AFRAME.registerPrimitive( 'a-sxr-button', {
         'onclick': 'sxr-interactable.clickAction',
         'onhover': 'sxr-interactable.hoverAction',
         'key-code': 'sxr-interactable.keyCode',
+        'key': 'sxr-interactable.key',
         //gui item general
         'width': 'sxr-item.width',
         'height': 'sxr-item.height',

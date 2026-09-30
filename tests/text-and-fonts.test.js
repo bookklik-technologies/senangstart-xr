@@ -1,20 +1,25 @@
 /**
- * P2 tests: text renderer v2 (R17).
- * - createTextEntity attaches a persistent drawing state to the entity
- * - redrawTextEntity redraws in place (same canvas + texture) when the box
- *   is unchanged, and returns false when the box size changed
- * - the default pixel ratio produces compact (GPU-cheap) textures
+ * Text renderer + fonts (real vars.js):
+ * - createTextEntity attaches a persistent drawing state with compact
+ *   power-of-two textures; redrawTextEntity redraws in place and refuses on
+ *   box-size changes
+ * - circle loader/timer retain attached text across updates; resized text is
+ *   replaced and disposed exactly once
+ * - icons: persistent state, in-place redraw, synchronous fallback for
+ *   unknown icons, and no async draw into disposed entities
+ * - font files: shared pending loads, queued redraws on resolve, failure
+ *   cleanup, bundle-relative default font URL
  */
-describe('SXR text renderer v2', () => {
+const {
+  setupAFRAME, teardownAFRAME, stubCreateElement, createFontHarness,
+  removeFontHarness,
+} = require('./helpers');
+
+describe('SXR text renderer + fonts', () => {
   let createElementSpy;
 
   beforeAll(() => {
-    global.AFRAME = {
-      registerComponent: jest.fn(),
-      registerPrimitive: jest.fn(),
-      components: {},
-      utils: {entity: {setComponentProperty: jest.fn()}},
-    };
+    setupAFRAME();
     require('../src/scripts/vars.js');
     if (!global.SXR && global.window && global.window.SXR) {
       global.SXR = global.window.SXR;
@@ -22,35 +27,37 @@ describe('SXR text renderer v2', () => {
     require('../src/components/circle-loader.js');
     require('../src/components/circle-timer.js');
     global.THREE = {
-      CanvasTexture: jest.fn(function (canvas) { this.image = canvas; this.dispose = jest.fn(); }),
-      MeshBasicMaterial: jest.fn(function () { this.dispose = jest.fn(); }),
+      CanvasTexture: jest.fn(function (canvas) { this.image = canvas; this.needsUpdate = false; this.dispose = jest.fn(); }),
+      MeshBasicMaterial: jest.fn(function (opts) { Object.assign(this, opts); this.dispose = jest.fn(); }),
       PlaneGeometry: jest.fn(function () { this.dispose = jest.fn(); }),
-      Mesh: jest.fn(),
+      Mesh: jest.fn(function () { this.renderOrder = 0; }),
       LinearFilter: 'LinearFilter',
       DoubleSide: 'DoubleSide',
     };
   });
 
   afterAll(() => {
-    delete global.AFRAME;
+    teardownAFRAME();
     delete global.THREE;
     delete global.SXR;
   });
 
   beforeEach(() => {
-    const originalCreateElement = document.createElement.bind(document);
-    createElementSpy = jest.spyOn(document, 'createElement').mockImplementation((tagName, options) => {
-      const element = originalCreateElement(tagName, options);
-      if (tagName === 'a-entity') {
-        element.setObject3D = jest.fn();
-        element.removeAttribute = () => {};
-      }
-      return element;
-    });
+    // real canvas elements (jest-canvas-mock), a-entity enhanced with
+    // setObject3D for the text renderer
+    createElementSpy = stubCreateElement({enhance: ['a-entity']});
+    if (window.SXR && window.SXR.fonts) {
+      window.SXR.fonts.registered = {};
+      window.SXR.fonts.pending = {};
+      window.SXR.fonts.redrawQueue = {};
+      window.SXR.bundleBaseUrl = '';
+    }
+    global.document.fonts = {add: jest.fn()};
   });
 
   afterEach(() => {
     createElementSpy.mockRestore();
+    removeFontHarness();
   });
 
   const makeOptions = (overrides) => Object.assign({
@@ -62,6 +69,8 @@ describe('SXR text renderer v2', () => {
     color: '#FFFFFF',
     align: 'center',
   }, overrides);
+
+  // ---- text entities -----------------------------------------------------------
 
   test('createTextEntity attaches persistent state and compact textures', () => {
     const entity = window.SXR.createTextEntity(makeOptions());
@@ -101,6 +110,11 @@ describe('SXR text renderer v2', () => {
     expect(entity._sxrTextState).toBe(state);
   });
 
+  test('redrawTextEntity returns false for entities without text state', () => {
+    expect(window.SXR.redrawTextEntity(null, makeOptions())).toBe(false);
+    expect(window.SXR.redrawTextEntity({}, makeOptions())).toBe(false);
+  });
+
   test('each redraw clears previous lettering before drawing shorter or empty text', () => {
     const entity = window.SXR.createTextEntity(makeOptions({value: 'Last event: ready'}));
     const {ctx, canvas} = entity._sxrTextState;
@@ -116,6 +130,8 @@ describe('SXR text renderer v2', () => {
       expect(ctx.fillText.mock.calls.map((call) => call[0]).join(' ')).toBe(value);
     });
   });
+
+  // ---- circle widgets on the real renderer ---------------------------------------
 
   const makeCircle = (name) => {
     const definition = global.AFRAME.registerComponent.mock.calls.find((call) => call[0] === name)[1];
@@ -244,10 +260,7 @@ describe('SXR text renderer v2', () => {
     });
   });
 
-  test('redrawTextEntity returns false for entities without text state', () => {
-    expect(window.SXR.redrawTextEntity(null, makeOptions())).toBe(false);
-    expect(window.SXR.redrawTextEntity({}, makeOptions())).toBe(false);
-  });
+  // ---- icons ---------------------------------------------------------------------
 
   test('createIconEntity attaches persistent state and redraws in place', () => {
     const entity = window.SXR.createIconEntity({icon: 'check', width: 0.4, color: '#FFFFFF'});
@@ -280,5 +293,107 @@ describe('SXR text renderer v2', () => {
 
     expect(onLoad).toHaveBeenCalledTimes(1);
     expect(entity._sxrIconState).toBeDefined();
+  });
+
+  test('a disposed icon entity never redraws into disposed GPU resources', () => {
+    const entity = window.SXR.createIconEntity({icon: 'check', width: 0.4, color: '#FFFFFF'});
+    const state = entity._sxrIconState;
+    const texture = entity._sxrIconTexture;
+    texture.needsUpdate = false; // baseline: initial draw already flushed
+
+    // dispose semantics: removeEntity flags before releasing resources
+    entity._sxrDisposed = true;
+
+    expect(() => state.draw()).not.toThrow();
+    expect(texture.needsUpdate).toBe(false);
+  });
+
+  // ---- fonts -----------------------------------------------------------------------
+
+  test('concurrent callers share one pending load and the family resolves once', async () => {
+    const state = createFontHarness();
+
+    const first = window.SXR.registerFontFile('Shared.ttf');
+    const second = window.SXR.registerFontFile('Shared.ttf');
+    expect(state.loadSpy).toHaveBeenCalledTimes(1);
+
+    state.resolveLoad.resolve({});
+    const [familyA, familyB] = await Promise.all([first, second]);
+
+    expect(familyA).toBe('Shared');
+    expect(familyB).toBe('Shared');
+    expect(global.document.fonts.add).toHaveBeenCalledTimes(1);
+    expect(window.SXR.fonts.registered['Shared.ttf']).toBe('Shared');
+  });
+
+  test('text drawn while the font is pending redraws when it resolves', async () => {
+    const state = createFontHarness();
+
+    const entity = window.SXR.createTextEntity({
+      value: 'Pending font',
+      width: 2, height: 1, fontSize: 0.2,
+      fontFamily: 'Late.ttf',
+      color: '#FFFFFF',
+    });
+    expect(window.SXR.fonts.redrawQueue['Late.ttf']).toHaveLength(1);
+    const texture = entity._sxrTextTexture;
+    texture.needsUpdate = false; // baseline: initial draw already flushed
+
+    state.resolveLoad.resolve({});
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(window.SXR.fonts.registered['Late.ttf']).toBe('Late');
+    // the queued redraw re-flushed the texture with the real typeface
+    expect(texture.needsUpdate).toBe(true);
+  });
+
+  test('failed loads clear the redraw queue without touching entities', async () => {
+    const state = createFontHarness();
+
+    const entity = window.SXR.createTextEntity({
+      value: 'Broken font', width: 2, height: 1, fontSize: 0.2,
+      fontFamily: 'Missing.ttf', color: '#FFFFFF',
+    });
+    const texture = entity._sxrTextTexture;
+    texture.needsUpdate = false; // baseline: initial draw already flushed
+
+    state.resolveLoad.reject(new Error('no font'));
+    const family = await window.SXR.registerFontFile('Missing.ttf');
+
+    expect(family).toBeNull();
+    expect(window.SXR.fonts.redrawQueue['Missing.ttf']).toBeUndefined();
+    expect(texture.needsUpdate).toBe(false);
+  });
+
+  test('the bundled default font resolves relative to the bundle URL', () => {
+    const state = createFontHarness();
+    window.SXR.bundleBaseUrl = 'https://cdn.example.com/pkg/dist/';
+
+    window.SXR.registerFontFile(window.SXR.fonts.default);
+
+    expect(state.loadSpy).toHaveBeenCalledTimes(1);
+    const src = global.FontFace.mock.calls[0][1];
+    expect(src).toBe('url("https://cdn.example.com/pkg/dist/Outfit-Regular.ttf")');
+  });
+
+  test('custom fonts keep page-relative resolution', () => {
+    const state = createFontHarness();
+
+    window.SXR.registerFontFile('assets/Custom-Bold.woff2');
+
+    const src = global.FontFace.mock.calls[0][1];
+    expect(src).toBe('url("assets/Custom-Bold.woff2")');
+    void state;
+  });
+
+  test('non-file font families bypass the font pipeline entirely', () => {
+    expect(window.SXR.onFontResolved('Arial', () => {})).toBe(false);
+    expect(window.SXR.getCanvasFontFamily('Arial')).toBe('Arial');
+    expect(window.SXR.fonts.redrawQueue['Arial']).toBeUndefined();
+  });
+
+  test('onFontResolved returns false for already-resolved fonts', () => {
+    window.SXR.fonts.registered['Done.ttf'] = 'Done';
+    expect(window.SXR.onFontResolved('Done.ttf', () => {})).toBe(false);
   });
 });

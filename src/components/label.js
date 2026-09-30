@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-label', {
+  dependencies: ['sxr-item'],
   schema: {
     value: {type: 'string', default: ''},
     align: {type: 'string', default: 'center'},
@@ -13,20 +14,34 @@ AFRAME.registerComponent('sxr-label', {
     backgroundColor: {type: 'string', default: SXR.colors.surface},
     opacity: { type: 'number', default: 1.0 },
     textDepth: { type: 'number', default: 0.01 },
+    textOcclusion: {type: 'boolean', default: false},
     textStrokeColor: {type: 'string', default: ''},
     textStrokeWidth: {type: 'number', default: -1},
   },
   init: function() {
     const data = this.data;
     const el = this.el;
-    const guiItem = el.getAttribute("sxr-item");
+    const component = this;
+    const guiItem = SXR.getItem(el);
     this.guiItem = guiItem;
 
     this.updateBackground();
-    
+
     this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
 
     this.setText(data.value);
+
+    // live sxr-item updates (dimensions) resize the background + text box
+    this._onItemChanged = SXR.watchGuiItem(el, function () {
+      component.guiItem = SXR.getItem(el);
+      component.updateBackground();
+      if (component.textEntity) {
+        SXR.removeEntity(component.textEntity);
+        component.textEntity = null;
+        component._lastTextKey = null;
+        component.setText(data.value);
+      }
+    });
 
     ////WAI ARIA Support
 
@@ -39,12 +54,12 @@ AFRAME.registerComponent('sxr-label', {
     update: function (oldData) {
         const data = this.data;
         const hasOld = oldData && Object.keys(oldData).length > 0;
-        this.guiItem = this.el.getAttribute("sxr-item");
+        this.guiItem = SXR.getItem(this.el);
 
         const textKey = [
             data.value, data.fontSize, data.lineHeight, data.letterSpacing,
             data.fontFamily, data.fontColor, data.align,
-            data.textStrokeColor, data.textStrokeWidth, data.textDepth
+            data.textOcclusion, data.textStrokeColor, data.textStrokeWidth, data.textDepth
         ].join('|');
         const backgroundKey = [
             data.backgroundColor, data.opacity, this.guiItem.width, this.guiItem.height
@@ -53,6 +68,11 @@ AFRAME.registerComponent('sxr-label', {
         if (!hasOld || textKey !== this._lastTextKey) {
             this._lastTextKey = textKey;
             if (this.textEntity) {
+                // occlusion changes the material, so recreate instead of redraw
+                if (oldData && oldData.textOcclusion !== undefined && data.textOcclusion !== oldData.textOcclusion) {
+                    SXR.removeEntity(this.textEntity);
+                    this.textEntity = null;
+                }
                 this.setText(data.value);
             }
         }
@@ -67,9 +87,12 @@ AFRAME.registerComponent('sxr-label', {
             SXR.removeEntity(this.textEntity);
             this.textEntity = null;
         }
+        if (this._onItemChanged) {
+            this.el.removeEventListener('componentchanged', this._onItemChanged);
+        }
     },
     updateBackground: function () {
-        const guiItem = this.guiItem || this.el.getAttribute("sxr-item");
+        const guiItem = this.guiItem || SXR.getItem(this.el);
         if (this.data.opacity <= 0) {
             this.el.removeAttribute('geometry');
             this.el.removeAttribute('material');
@@ -99,14 +122,17 @@ AFRAME.registerComponent('sxr-label', {
         }
     },
     setText: function (newText) {
+        this.normalizedFontSize = SXR.normalizeFontSize(this.data.fontSize);
+        const guiItem = this.guiItem || SXR.getItem(this.el);
         const options = {
             value: newText,
-            width: this.guiItem.width / 1.05,
-            height: this.guiItem.height,
+            width: guiItem.width / 1.05,
+            height: guiItem.height,
             fontSize: this.normalizedFontSize,
             lineHeight: this.data.lineHeight,
             fontFamily: this.data.fontFamily,
             color: this.data.fontColor,
+            depthTest: this.data.textOcclusion === true,
             strokeColor: this.data.textStrokeColor || undefined,
             strokeWidth: this.data.textStrokeWidth >= 0 ? this.data.textStrokeWidth : undefined,
             align: this.data.align
@@ -143,6 +169,7 @@ AFRAME.registerPrimitive( 'a-sxr-label', {
     'background-color': 'sxr-label.backgroundColor',
     'opacity': 'sxr-label.opacity',
     'text-depth': 'sxr-label.textDepth',
+    'text-occlusion': 'sxr-label.textOcclusion',
     'text-stroke-color': 'sxr-label.textStrokeColor',
     'text-stroke-width': 'sxr-label.textStrokeWidth'
   }

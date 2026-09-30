@@ -1,4 +1,6 @@
 const path = require('path');
+const fs = require('fs');
+const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = (env = {}) => {
@@ -52,6 +54,16 @@ module.exports = (env = {}) => {
       port: 8080,
       open: false,
     },
-    plugins: [],
+    plugins: [{
+      apply(compiler) {
+        compiler.hooks.thisCompilation.tap('BundledFont', compilation => {
+          compilation.hooks.processAssets.tap({name: 'BundledFont', stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL}, () => {
+            const fontPath = path.resolve(__dirname, 'Outfit-Regular.ttf');
+            compilation.fileDependencies.add(fontPath);
+            compilation.emitAsset('Outfit-Regular.ttf', new webpack.sources.RawSource(fs.readFileSync(fontPath)));
+          });
+        });
+      }
+    }],
   };
 };

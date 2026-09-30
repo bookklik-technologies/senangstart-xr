@@ -20,8 +20,32 @@ window.SXR.colors = {
 window.SXR.fonts = {
     default: 'Outfit-Regular.ttf',
     // filename -> registered family name (loaded), false (failed) or null (pending)
-    registered: {}
+    registered: {},
+    // filename -> shared in-flight load Promise (so concurrent widgets share one load)
+    pending: {},
+    // filename -> [callback,...] invoked once the font resolves, so already
+    // rendered text can redraw with the real typeface
+    redrawQueue: {}
 };
+
+// Base URL of the distributed bundle (captured while this script runs, when
+// document.currentScript still points at the bundle). Used to resolve the
+// bundled default font relative to the script instead of the page.
+window.SXR.bundleBaseUrl = (function () {
+    try {
+        if (document.currentScript && document.currentScript.src) {
+            return new URL('.', document.currentScript.src).href;
+        }
+        const scripts = document.getElementsByTagName('script');
+        for (let i = scripts.length - 1; i >= 0; i--) {
+            const src = scripts[i].getAttribute('src') || '';
+            if (src.indexOf('senangstart-xr') !== -1) {
+                return new URL('.', new URL(src, document.baseURI)).href;
+            }
+        }
+    } catch { /* non-DOM environment: fall back to page-relative URLs */ }
+    return '';
+})();
 
 // SenangStart SVG icons replace the legacy icon-font mapping while preserving
 // the public SXR.icons lookup used by existing integrations.
@@ -43,9 +67,23 @@ window.SXR.getIconDataUrl = function(icon, color = '#000000', thickness = null) 
 };
 
 window.SXR.getUniqueId = function (stringPrefix) {
-    var counter = (window.SXR.getUniqueId._counter = (window.SXR.getUniqueId._counter || 0) + 1);
-    var randomstr = Math.random().toString(36).substring(2, 10);
+    const counter = (window.SXR.getUniqueId._counter = (window.SXR.getUniqueId._counter || 0) + 1);
+    const randomstr = Math.random().toString(36).substring(2, 10);
     return stringPrefix + '_' + counter + '_' + randomstr;
+};
+
+// Read the sxr-item data for a widget element, falling back to documented
+// defaults when the widget is placed on an ordinary entity (or a primitive
+// whose sxr-item has not parsed yet). Keeps widget init safe everywhere.
+window.SXR.getItem = function (el) {
+    const item = el && el.getAttribute ? el.getAttribute('sxr-item') : null;
+    if (item && item.width !== undefined && item.height !== undefined) { return item; }
+    return {
+        type: '', width: 1, height: 1, baseDepth: 0.01, depth: 0.02, gap: 0.025,
+        radius: 0, margin: {x: 0, y: 0, z: 0, w: 0},
+        bevel: false, bevelSegments: 5, steps: 2, bevelSize: 0.1, bevelOffset: 0,
+        bevelThickness: 0.1
+    };
 };
 
 window.SXR.getTextWidth = function(text, font) {
@@ -75,33 +113,65 @@ window.SXR.getActionFunction = function (name) {
 };
 
 // Register a font file (e.g. 'Outfit-Regular.ttf') through the FontFace API
-// so canvas text can actually use it. Resolved relative to the page URL.
-// Returns a Promise resolving to the family name, or null when FontFace is
-// unavailable or the load fails. Until the load completes, canvas rendering
-// falls back to the system font stack.
+// so canvas text can actually use it. The bundled default font resolves
+// relative to the distributed bundle; custom fonts resolve relative to the
+// page URL. Concurrent callers share one pending load, and callbacks
+// registered through SXR.onFontResolved run once the load settles so existing
+// text can redraw with the real typeface. Returns a Promise resolving to the
+// family name, or null when FontFace is unavailable or the load fails.
 window.SXR.registerFontFile = function (fontFile) {
     if (!fontFile || !/\.(ttf|otf|woff2?)(\?.*)?$/i.test(fontFile)) {
         return Promise.resolve(null);
     }
-    const registered = window.SXR.fonts.registered;
-    if (registered[fontFile] !== undefined) {
-        return Promise.resolve(registered[fontFile] || null);
+    const fonts = window.SXR.fonts;
+    if (fonts.registered[fontFile]) {
+        return Promise.resolve(fonts.registered[fontFile]);
+    }
+    if (fonts.registered[fontFile] === false) return Promise.resolve(null);
+    if (fonts.pending[fontFile]) {
+        return fonts.pending[fontFile];
     }
     if (typeof FontFace === 'undefined' || !document.fonts || !document.fonts.add) {
-        registered[fontFile] = false;
+        fonts.registered[fontFile] = false;
         return Promise.resolve(null);
     }
     const family = fontFile.replace(/\.[^.]+(\?.*)?$/, '').replace(/[^\w-]/g, '') || 'SXRFont';
-    registered[fontFile] = null; // pending
-    const face = new FontFace(family, `url("${fontFile}")`);
-    return face.load().then(function (loaded) {
+    const url = (fontFile === fonts.default && window.SXR.bundleBaseUrl)
+        ? window.SXR.bundleBaseUrl + fontFile
+        : fontFile;
+    const face = new FontFace(family, `url("${url}")`);
+    const promise = face.load().then(function (loaded) {
         document.fonts.add(loaded);
-        registered[fontFile] = family;
+        fonts.registered[fontFile] = family;
+        delete fonts.pending[fontFile];
+        const redraws = fonts.redrawQueue[fontFile] || [];
+        delete fonts.redrawQueue[fontFile];
+        redraws.forEach(function (callback) {
+            try { callback(family); } catch { /* a dead entity must not break the rest */ }
+        });
         return family;
     }).catch(function () {
-        registered[fontFile] = false;
+        fonts.registered[fontFile] = false;
+        delete fonts.pending[fontFile];
+        delete fonts.redrawQueue[fontFile];
         return null;
     });
+    fonts.pending[fontFile] = promise;
+    return promise;
+};
+
+// Queue a callback for when a font file finishes (or fails) loading. Returns
+// true when the font is still pending (callback queued), false when it has
+// already resolved and the callback will never fire.
+window.SXR.onFontResolved = function (fontFile, callback) {
+    const fonts = window.SXR.fonts;
+    if (!fontFile || !/\.(ttf|otf|woff2?)(\?.*)?$/i.test(fontFile)) { return false; }
+    if (fonts.registered[fontFile] !== undefined || typeof FontFace === 'undefined') {
+        return false;
+    }
+    if (typeof callback !== 'function') { return false; }
+    (fonts.redrawQueue[fontFile] = fonts.redrawQueue[fontFile] || []).push(callback);
+    return true;
 };
 
 window.SXR.getCanvasFontFamily = function(fontFamily) {
@@ -124,15 +194,60 @@ window.SXR.getValidColor = function(color, fallback = window.SXR.colors.onSurfac
 };
 
 window.SXR.removeEntity = function(entity) {
-    if (entity && entity.parentNode) {
+    if (entity && !entity._sxrDisposed) {
+        // flag first so pending async asset callbacks (icon image loads,
+        // font redraws) ignore this entity instead of touching disposed
+        // GPU resources
+        entity._sxrDisposed = true;
         if (entity._sxrTextTexture) entity._sxrTextTexture.dispose();
         if (entity._sxrTextMaterial) entity._sxrTextMaterial.dispose();
         if (entity._sxrTextGeometry) entity._sxrTextGeometry.dispose();
         if (entity._sxrIconTexture) entity._sxrIconTexture.dispose();
         if (entity._sxrIconMaterial) entity._sxrIconMaterial.dispose();
         if (entity._sxrIconGeometry) entity._sxrIconGeometry.dispose();
-        entity.parentNode.removeChild(entity);
+        if (entity.children) Array.from(entity.children).forEach(window.SXR.removeEntity);
+        if (entity.parentNode) entity.parentNode.removeChild(entity);
     }
+};
+
+// Keyboard interaction helpers shared by the widgets. Widgets attach these to
+// their own element, so they only fire while the widget holds DOM focus.
+window.SXR.keyboard = {
+    // Surfaces where the user is typing text: global shortcuts must not fire
+    // and activation keys must not double-handle.
+    isEditableTarget: function (target) {
+        if (!target) { return false; }
+        const tag = (target.tagName || '').toLowerCase();
+        return tag === 'input' || tag === 'textarea' || tag === 'select' ||
+            target.isContentEditable === true;
+    },
+    // True when the event is a plain activation press (not a repeated key,
+    // not part of IME composition).
+    isActivationPress: function (event) {
+        if (!event || event.repeat || event.isComposing || event.keyCode === 229) {
+            return false;
+        }
+        return event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar';
+    },
+    isActivationKey: function (key) {
+        return key === 'Enter' || key === ' ' || key === 'Spacebar';
+    },
+    isArrowKey: function (key) {
+        return key === 'ArrowUp' || key === 'ArrowDown' ||
+            key === 'ArrowLeft' || key === 'ArrowRight';
+    }
+};
+
+// Watch the sxr-item component for live changes (width/height/depth/...).
+// Returns the handler so the owning component can detach it on remove().
+window.SXR.watchGuiItem = function (el, callback) {
+    const handler = function (evt) {
+        if (!evt.detail || evt.detail.name !== 'sxr-item') { return; }
+        if (evt.target && evt.target !== el) return;
+        callback(evt.detail.newData || el.getAttribute('sxr-item'));
+    };
+    el.addEventListener('componentchanged', handler);
+    return handler;
 };
 
 const TEXT_PIXEL_RATIO = 128;
@@ -175,6 +290,8 @@ window.SXR.createTextState = function (options = {}) {
 // Draw text into an existing text state (the fitting/layout algorithm runs
 // again, but the canvas, texture and GPU resources are reused).
 window.SXR.drawTextToState = function (state, options = {}) {
+    // remember the last draw options so font-resolution redraws can repeat it
+    state.lastOptions = Object.assign({}, options);
     const ctx = state.ctx;
     const canvas = state.canvas;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -286,21 +403,24 @@ window.SXR.createTextEntity = function(options = {}) {
     window.SXR.drawTextToState(state, options);
 
     const entity = document.createElement('a-entity');
-    const texture = new THREE.CanvasTexture(state.canvas);
+    const texture = new AFRAME.THREE.CanvasTexture(state.canvas);
     texture.needsUpdate = true;
     texture.generateMipmaps = false;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    const material = new THREE.MeshBasicMaterial({
+    texture.minFilter = AFRAME.THREE.LinearFilter;
+    texture.magFilter = AFRAME.THREE.LinearFilter;
+    // default preserves the legacy always-on-top rendering; opt in with
+    // options.depthTest to let scene geometry occlude the text
+    const depthTest = options.depthTest === true;
+    const material = new AFRAME.THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
-        depthTest: false,
+        depthTest: depthTest,
         depthWrite: false,
-        side: THREE.DoubleSide
+        side: AFRAME.THREE.DoubleSide
     });
-    const geometry = new THREE.PlaneGeometry(state.width, state.height);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 1000;
+    const geometry = new AFRAME.THREE.PlaneGeometry(state.width, state.height);
+    const mesh = new AFRAME.THREE.Mesh(geometry, material);
+    mesh.renderOrder = depthTest ? 10 : 1000;
     entity.setObject3D('mesh', mesh);
     entity._sxrTextCanvas = state.canvas;
     entity._sxrTextCtx = state.ctx;
@@ -308,6 +428,16 @@ window.SXR.createTextEntity = function(options = {}) {
     entity._sxrTextMaterial = material;
     entity._sxrTextGeometry = geometry;
     entity._sxrTextState = state;
+
+    // if the requested font is still loading, redraw this text with the real
+    // typeface once it resolves (the pending load is shared across widgets)
+    const fontFamily = options.fontFamily;
+    if (fontFamily && /\.(ttf|otf|woff2?)(\?.*)?$/i.test(fontFamily)) {
+        window.SXR.onFontResolved(fontFamily, function () {
+            if (entity._sxrDisposed || !entity._sxrTextState) { return; }
+            window.SXR.redrawTextEntity(entity, state.lastOptions || options);
+        });
+    }
     return entity;
 };
 
@@ -326,6 +456,9 @@ window.SXR.redrawTextEntity = function(entity, options = {}) {
     }
     window.SXR.drawTextToState(state, options);
     state.textureNeedsUpdate = true;
+    if (entity._sxrTextMaterial) entity._sxrTextMaterial.depthTest = options.depthTest === true;
+    const mesh = entity.getObject3D && entity.getObject3D('mesh');
+    if (mesh) mesh.renderOrder = options.depthTest === true ? 10 : 1000;
     if (entity._sxrTextTexture) {
         entity._sxrTextTexture.needsUpdate = true;
     }
@@ -354,22 +487,24 @@ window.SXR.createIconEntity = function(options = {}) {
     canvas.height = Math.min(2048, Math.max(128, nextPow2(height * state.pixelRatio)));
 
     const ctx = canvas.getContext('2d');
-    const texture = new THREE.CanvasTexture(canvas);
+    const texture = new AFRAME.THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
     texture.generateMipmaps = false;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = AFRAME.THREE.LinearFilter;
+    texture.magFilter = AFRAME.THREE.LinearFilter;
 
-    const material = new THREE.MeshBasicMaterial({
+    const material = new AFRAME.THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
-        depthTest: false,
+        // default preserves the legacy always-on-top rendering; opt in with
+        // options.depthTest to let scene geometry occlude the icon
+        depthTest: options.depthTest === true,
         depthWrite: false,
-        side: THREE.DoubleSide
+        side: AFRAME.THREE.DoubleSide
     });
-    const geometry = new THREE.PlaneGeometry(width, height);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 1001;
+    const geometry = new AFRAME.THREE.PlaneGeometry(width, height);
+    const mesh = new AFRAME.THREE.Mesh(geometry, material);
+    mesh.renderOrder = options.depthTest === true ? 10 : 1001;
 
     const entity = document.createElement('a-entity');
     entity.setObject3D('mesh', mesh);
@@ -389,6 +524,9 @@ window.SXR.createIconEntity = function(options = {}) {
         texture.needsUpdate = true;
     };
     state.draw = function() {
+        // never draw into disposed GPU resources (the entity may have been
+        // removed while a previous draw's image was still loading)
+        if (entity._sxrDisposed) { return; }
         const iconDataUrl = window.SXR.getIconDataUrl(state.icon, state.color, state.thickness);
         if (!iconDataUrl) {
             state.drawFallback();
@@ -397,6 +535,7 @@ window.SXR.createIconEntity = function(options = {}) {
         }
         const image = new Image();
         image.onload = function() {
+            if (entity._sxrDisposed) { return; }
             const size = Math.min(canvas.width, canvas.height) * state.scale;
             const x = (canvas.width - size) / 2;
             const y = (canvas.height - size) / 2;
@@ -432,6 +571,9 @@ window.SXR.redrawIconEntity = function(entity, options = {}) {
     if (options.color !== undefined) { state.color = window.SXR.getValidColor(options.color, state.color); }
     if (options.thickness !== undefined) { state.thickness = options.thickness; }
     if (options.scale !== undefined && Number.isFinite(Number(options.scale))) { state.scale = Number(options.scale); }
+    if (entity._sxrIconMaterial) entity._sxrIconMaterial.depthTest = options.depthTest === true;
+    const mesh = entity.getObject3D && entity.getObject3D('mesh');
+    if (mesh) mesh.renderOrder = options.depthTest === true ? 10 : 1001;
     state.draw();
     return true;
 };

@@ -18,7 +18,7 @@ AFRAME.registerComponent('rounded', {
     opacity: {type: 'number', default: 1}
   },
   init: function () {
-    this.rounded = new THREE.Mesh( this.draw(), new THREE.MeshStandardMaterial( { color: new THREE.Color(this.data.color) } ) );
+    this.rounded = new AFRAME.THREE.Mesh( this.draw(), new AFRAME.THREE.MeshStandardMaterial( { color: new AFRAME.THREE.Color(this.data.color) } ) );
     this.updateOpacity();
     this.el.setObject3D('mesh', this.rounded);
   },
@@ -73,7 +73,7 @@ AFRAME.registerComponent('rounded', {
     this.rounded = null;
   },
   draw: function() {
-    const roundedRectShape = new THREE.Shape();
+    const roundedRectShape = new AFRAME.THREE.Shape();
     function roundedRect( ctx, x, y, width, height, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius ) {
       if (!topLeftRadius) { topLeftRadius = 0.00001; }
       if (!topRightRadius) { topRightRadius = 0.00001; }
@@ -97,7 +97,7 @@ AFRAME.registerComponent('rounded', {
     if (this.data.bottomRightRadius !== -1) { corners[3] = this.data.bottomRightRadius; }
 
     roundedRect( roundedRectShape, -this.data.width/2, -this.data.height/2, this.data.width, this.data.height, corners[0], corners[1], corners[2], corners[3] );
-    return new THREE.ShapeGeometry( roundedRectShape );
+    return new AFRAME.THREE.ShapeGeometry( roundedRectShape );
   }
 });
 

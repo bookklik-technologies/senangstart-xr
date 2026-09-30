@@ -17,6 +17,7 @@ describe('rounded component', () => {
     };
 
     global.AFRAME = {
+      get THREE() { return global.THREE; },
       registerComponent: jest.fn((name, definition) => {
         if (name === 'rounded') {
           component = definition;

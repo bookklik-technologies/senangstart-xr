@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-progressbar', {
+    dependencies: ['sxr-item'],
     schema: {
         backgroundColor: {type: 'string', default: SXR.colors.surface},
         activeColor: {type: 'string', default: SXR.colors.primary},
@@ -10,7 +11,8 @@ AFRAME.registerComponent('sxr-progressbar', {
 
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
+        const component = this;
+        const guiItem = SXR.getItem(el);
 
         el.setAttribute('geometry', `primitive: plane; height: ${guiItem.height}; width: ${guiItem.width};`);
         el.setAttribute('material', `shader: flat; opacity: 1;  color: ${data.backgroundColor}; side:front;`);
@@ -22,11 +24,30 @@ AFRAME.registerComponent('sxr-progressbar', {
         this.guiItem = guiItem;
         this.progressMeter = progressMeter;
         this.updateProgress();
+
+        // live sxr-item updates (dimensions) rebuild the geometry
+        this._onItemChanged = SXR.watchGuiItem(el, function () {
+            component._rebuild();
+        });
+    },
+    // dispose owned geometry and rebuild from current sxr-item data
+    _rebuild: function () {
+        const el = this.el;
+        const previousItemKey = this._itemKey;
+        this.guiItem = SXR.getItem(el);
+        const guiItem = this.guiItem;
+        this._itemKey = [guiItem.width, guiItem.height].join('|');
+        if (previousItemKey !== undefined && previousItemKey === this._itemKey) { return; }
+
+        el.setAttribute('geometry', `primitive: plane; height: ${guiItem.height}; width: ${guiItem.width};`);
+        this.updateProgress();
     },
     update: function () {
         if (this.progressMeter) this.updateProgress();
     },
     updateProgress: function () {
+        this.el.setAttribute('material', 'color', this.data.backgroundColor);
+        this.progressMeter.setAttribute('material', 'color', this.data.activeColor);
         const percent = Math.min(1, Math.max(0, this.data.percent));
         const activeWidth = this.guiItem.width * percent;
         const activeX = -this.guiItem.width/2 + activeWidth/2;
@@ -34,6 +55,14 @@ AFRAME.registerComponent('sxr-progressbar', {
         this.progressMeter.setAttribute('geometry', `primitive: box; width: ${activeWidth}; height: ${this.guiItem.height}; depth: 0.02;`);
         this.progressMeter.setAttribute('position', `${activeX} 0 0.01`);
     },
+    remove: function () {
+        const el = this.el;
+        el.removeEventListener('componentchanged', this._onItemChanged);
+        if (this.progressMeter) {
+            SXR.removeEntity(this.progressMeter);
+            this.progressMeter = null;
+        }
+    }
 });
 
 AFRAME.registerPrimitive( 'a-sxr-progressbar', {

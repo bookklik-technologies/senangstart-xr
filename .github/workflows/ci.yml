@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run dist:all
+      - run: npm run check:build
+      - name: Verify package contents (consumer fixture)
+        run: npm run check:package
+      - run: npm run audit:prod
+      - name: Upload bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: senangstart-xr-bundles
+          path: dist/
+          retention-days: 7
+  browser:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        aframe: ['1.7.0', '1.7.1', '1.8.0']
+        bundle: ['senangstart-xr.js', 'senangstart-xr.min.js']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.56.1 aframe@${{ matrix.aframe }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run dist:all
+      - run: npm run check:browser
+        env:
+          SXR_BUNDLE: ${{ matrix.bundle }}
+          SXR_AFRAME: ${{ matrix.aframe }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-${{ matrix.aframe }}-${{ matrix.bundle }}
+          path: artifacts/browser/

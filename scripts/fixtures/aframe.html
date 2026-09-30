@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SenangStart XR integration fixture</title>
+  <script src="/aframe.js"></script>
+  <script src="/dist/__BUNDLE__"></script>
+  <script>window.recordVertical = function (percent) { window.verticalValue = percent; };</script>
+</head>
+<body>
+  <a-scene embedded style="width:1280px;height:900px" background="color:#161618">
+    <a-camera position="0 1.6 5"></a-camera>
+    <a-sxr-flex-container id="layout" width="4" height="2" font-color="#ff0000" item-padding="0.2" position="0 2 -1">
+      <a-sxr-label id="first" width="1" height="0.5" value="Inherited text"></a-sxr-label>
+      <a-sxr-label id="second" width="1" height="0.5" value="Second label"></a-sxr-label>
+    </a-sxr-flex-container>
+    <a-sxr-slider id="slider" width="3" height="0.5" position="0 0.5 -1"></a-sxr-slider>
+    <a-sxr-vertical-slider id="vertical" width="0.5" height="2" onclick="recordVertical" position="3 1 -1"></a-sxr-vertical-slider>
+    <a-sxr-input id="input" value="Edit me" width="2" height="0.5" native-editing="true" position="0 1 -1"></a-sxr-input>
+    <a-sxr-toggle id="toggle" active="false" value="Disabled" position="-3 1 -1"></a-sxr-toggle>
+    <a-sxr-radio id="radio" active="false" value="Disabled" position="-3 0 -1"></a-sxr-radio>
+  </a-scene>
+</body>
+</html>

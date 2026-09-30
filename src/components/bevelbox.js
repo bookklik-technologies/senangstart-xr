@@ -22,12 +22,12 @@ AFRAME.registerComponent('bevelbox', {
     bevelSize: {type: 'number', default: 0.1},
     bevelOffset: {type: 'number', default: 0},
     bevelThickness: {type: 'number', default: 0.1}
-  },  
+  },
 
   multiple: false,
-  
-  init: function() {      
-    this.el.setObject3D('mesh', this.extrude(this.buildShape()));            
+
+  init: function() {
+    this.el.setObject3D('mesh', this.extrude(this.buildShape()));
   },
   update: function () {
     const el = this.el;
@@ -60,7 +60,7 @@ AFRAME.registerComponent('bevelbox', {
     const _x = -data.width / 2;
     const _y = -data.height / 2;
 
-    const shape = new THREE.Shape();      
+    const shape = new AFRAME.THREE.Shape();
     shape.moveTo( _x, _y + data.topLeftRadius );
     shape.lineTo( _x, _y + _h - data.topLeftRadius );
     shape.quadraticCurveTo( _x, _y + _h, _x + data.topLeftRadius, _y + _h );
@@ -72,10 +72,10 @@ AFRAME.registerComponent('bevelbox', {
     shape.quadraticCurveTo( _x, _y, _x, _y + data.bottomLeftRadius );
     return shape;
   },
-    
+
   extrude: function (roundedBase) {
     const data = this.data;
-    
+
     const extrudeSettings = {
       steps: data.steps,
       depth: data.depth,
@@ -84,12 +84,12 @@ AFRAME.registerComponent('bevelbox', {
       bevelSize: data.bevelSize,
       bevelOffset: data.bevelOffset,
       bevelSegments: data.bevelSegments
-    };      
-    
-    const extrudedGeometry = new THREE.ExtrudeGeometry(roundedBase, extrudeSettings);      
-    return new THREE.Mesh( extrudedGeometry , new THREE.MeshStandardMaterial({ 
-      side: THREE.DoubleSide 
-    }) );      
+    };
+
+    const extrudedGeometry = new AFRAME.THREE.ExtrudeGeometry(roundedBase, extrudeSettings);
+    return new AFRAME.THREE.Mesh( extrudedGeometry , new AFRAME.THREE.MeshStandardMaterial({
+      side: AFRAME.THREE.DoubleSide
+    }) );
   },
 
   /**

@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-cursor', {
+    dependencies: ['cursor', 'raycaster'],
     schema: {
         color: {type: 'string', default: SXR.colors.onSurface},
         hoverColor: {type: 'string', default: SXR.colors.secondary},
@@ -375,6 +376,18 @@ AFRAME.registerComponent('sxr-cursor', {
         if (this._onFusing) {
             el.removeEventListener('fusing', this._onFusing);
         }
+        // dispose the component-owned child entities
+        const self = this;
+        ['cursorShadow', 'cursorCenter', 'fuseLoader', 'cursorVerticalTop', 'cursorVerticalBottom',
+         'cursorHorizontalLeft', 'cursorHorizontalRight', 'cursorShadowTL', 'cursorShadowBL',
+         'cursorShadowTR', 'cursorShadowBR', 'cursorBoundTL', 'cursorBoundTL2', 'cursorBoundTR',
+         'cursorBoundTR2', 'cursorBoundBL', 'cursorBoundBL2', 'cursorBoundBR', 'cursorBoundBR2'
+        ].forEach(function (key) {
+            if (self[key]) {
+                SXR.removeEntity(self[key]);
+                self[key] = null;
+            }
+        });
     },
 });
 

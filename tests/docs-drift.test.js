@@ -34,6 +34,7 @@ describe('README ↔ schema consistency', () => {
 
   beforeAll(() => {
     global.AFRAME = {
+      get THREE() { return global.THREE; },
       registerComponent: (name, definition) => { registry[name] = definition; },
       registerPrimitive: (name, definition) => { primitives[name] = definition; },
       components: {},

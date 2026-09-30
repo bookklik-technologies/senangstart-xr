@@ -14,6 +14,7 @@
   "files": [
     "dist",
     "src",
+    "Outfit-Regular.ttf",
     "README.md",
     "LICENSE"
   ],
@@ -26,13 +27,17 @@
   },
   "homepage": "https://github.com/bookklik-technologies/senangstart-xr#readme",
   "scripts": {
-    "dist": "webpack",
+    "dist": "webpack && webpack --env mode=development",
     "dist-min": "webpack --env mode=production",
     "dist-dev": "webpack --env mode=development",
     "dist-example": "webpack --env output=example mode=development",
     "dist-example-min": "webpack --env output=example mode=production",
+    "dist:all": "npm run dist && npm run dist-example && npm run dist-example-min",
+    "check:build": "node scripts/check-build.js",
+    "check:package": "node scripts/verify-package.js",
+    "check:browser": "node scripts/browser-check.js",
     "start": "webpack serve",
-    "lint": "eslint src/",
+    "lint": "eslint src/ tests/ scripts/ --max-warnings=0",
     "lint:fix": "eslint src/ --fix",
     "test": "jest",
     "audit:prod": "npm audit --omit=dev --omit=peer",
@@ -50,7 +55,7 @@
     "senangstart-xr"
   ],
   "peerDependencies": {
-    "aframe": ">=1.0.0"
+    "aframe": ">=1.7.0 <1.9.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.0",

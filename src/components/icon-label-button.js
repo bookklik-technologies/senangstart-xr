@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-icon-label-button', {
+    dependencies: ['sxr-item', 'sxr-interactable'],
     schema: {
         on: {default: 'click'},
         toggle: {type: 'boolean', default: false},
@@ -9,6 +10,7 @@ AFRAME.registerComponent('sxr-icon-label-button', {
         iconActive: {type: 'string', default: ''},
         iconFontSize: {type: 'number', default: 0.35},
         iconFont: {type: 'string', default: ''},
+        iconOcclusion: {type: 'boolean', default: false},
         value: {type: 'string', default: ''},
         fontSize: {type: 'number', default: 0.2},
         fontFamily: {type: 'string', default: SXR.fonts.default},
@@ -22,7 +24,8 @@ AFRAME.registerComponent('sxr-icon-label-button', {
 
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
+        const component = this;
+        const guiItem = SXR.getItem(el);
         this.guiItem = guiItem;
         this.normalizedIconFontSize = SXR.normalizeFontSize(data.iconFontSize);
         this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
@@ -53,25 +56,25 @@ AFRAME.registerComponent('sxr-icon-label-button', {
         if(data.value !== ''){ this.setText(data.value) }
 
         this._onMouseEnter = function() {
-            buttonEntity.removeAttribute('animation__leave');
+            component.buttonEntity.removeAttribute('animation__leave');
             if (!(data.toggle)) {
-                buttonEntity.setAttribute('animation__enter', `property: material.color; from: ${data.backgroundColor}; to:${data.hoverColor}; dur:200;`);
+                component.buttonEntity.setAttribute('animation__enter', `property: material.color; from: ${data.backgroundColor}; to:${data.hoverColor}; dur:200;`);
             }
         };
         el.addEventListener('mouseenter', this._onMouseEnter);
         this._onMouseLeave = function() {
             if (!(data.toggle)) {
-                buttonEntity.removeAttribute('animation__click');
-                buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
+                component.buttonEntity.removeAttribute('animation__click');
+                component.buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
             }
-            buttonEntity.removeAttribute('animation__enter');
+            component.buttonEntity.removeAttribute('animation__enter');
         };
         el.addEventListener('mouseleave', this._onMouseLeave);
         this._onClick = function(event) {
             if (!(data.toggle)) { // if not toggling flashing active state
-                buttonEntity.setAttribute('animation__click', `property: material.color; from: ${data.activeColor}; to:${data.backgroundColor}; dur:400; easing: easeOutQuad;`);
+                component.buttonEntity.setAttribute('animation__click', `property: material.color; from: ${data.activeColor}; to:${data.backgroundColor}; dur:400; easing: easeOutQuad;`);
             }else{
-                el.components['sxr-icon-label-button'].setActiveState(!data.toggleState);
+                component.setActiveState(!data.toggleState);
             }
 
             const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
@@ -79,16 +82,42 @@ AFRAME.registerComponent('sxr-icon-label-button', {
         };
         el.addEventListener(data.on, this._onClick);
 
+        // focused keyboard operation: Enter/Space activate (a bound key
+        // shortcut fires through the shared registry, so skip to avoid
+        // duplicate activation)
+        this._onKeyUp = function (event) {
+            if (event.isComposing || event.keyCode === 229 || event.repeat) { return; }
+            if (!(event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar')) { return; }
+            const interactable = el.components['sxr-interactable'];
+            if (interactable && interactable.matchesEvent && interactable.matchesEvent(event)) { return; }
+            event.preventDefault();
+            el.emit(data.on);
+        };
+        el.addEventListener('keyup', this._onKeyUp);
+
         ////WAI ARIA Support
         el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('aria-label', data.value);
+        this._onItemChanged = SXR.watchGuiItem(el, () => this._resize());
 
 
     },
     update: function (oldData) {
         const data = this.data;
+        const el = this.el;
         const hasOld = oldData && Object.keys(oldData).length > 0;
+        this.buttonContainer.setAttribute('material', 'color', data.borderColor);
+        this.buttonEntity.setAttribute('material', 'color', data.toggleState ? data.activeColor : data.backgroundColor);
+        if (data.toggle) el.setAttribute('aria-pressed', String(data.toggleState));
 
-        const iconKey = [this.getIconName(), data.fontColor, data.iconFontSize, data.value !== ''].join('|');
+        // rebind the activation listener when the event name changes
+        if (hasOld && data.on !== oldData.on) {
+            el.removeEventListener(oldData.on, this._onClick);
+            el.addEventListener(data.on, this._onClick);
+        }
+
+        const iconKey = [this.getIconName(), data.fontColor, data.iconFontSize, data.value !== '', data.iconOcclusion].join('|');
         if (!hasOld || iconKey !== this._lastIconKey) {
             this._lastIconKey = iconKey;
             if (this.iconEntity) {
@@ -99,17 +128,27 @@ AFRAME.registerComponent('sxr-icon-label-button', {
         const textKey = [data.value, data.fontSize, data.fontFamily, data.fontColor].join('|');
         if (!hasOld || textKey !== this._lastTextKey) {
             this._lastTextKey = textKey;
-            if (this.textEntity) {
-                this.setText(this.data.value);
-            }
+            el.setAttribute('aria-label', data.value);
+            this.setText(this.data.value);
         }
 
+    },
+    _resize: function () {
+        this.guiItem = SXR.getItem(this.el);
+        const {width, height} = this.guiItem;
+        this.el.setAttribute('geometry', {primitive: 'plane', width, height});
+        this.buttonContainer.setAttribute('geometry', {primitive: 'box', width, height, depth: 0.02});
+        this.buttonEntity.setAttribute('geometry', {primitive: 'box', width: Math.max(0.001, width - 0.025), height: Math.max(0.001, height - 0.025), depth: 0.04});
+        this.setIcon(this.getIconName());
+        this.setText(this.data.value);
     },
     remove: function () {
         const el = this.el;
         el.removeEventListener('mouseenter', this._onMouseEnter);
         el.removeEventListener('mouseleave', this._onMouseLeave);
         el.removeEventListener(this.data.on, this._onClick);
+        el.removeEventListener('keyup', this._onKeyUp);
+        el.removeEventListener('componentchanged', this._onItemChanged);
         if (this.iconEntity) {
             SXR.removeEntity(this.iconEntity);
             this.iconEntity = null;
@@ -117,6 +156,14 @@ AFRAME.registerComponent('sxr-icon-label-button', {
         if (this.textEntity) {
             SXR.removeEntity(this.textEntity);
             this.textEntity = null;
+        }
+        if (this.buttonContainer) {
+            SXR.removeEntity(this.buttonContainer);
+            this.buttonContainer = null;
+        }
+        if (this.buttonEntity) {
+            SXR.removeEntity(this.buttonEntity);
+            this.buttonEntity = null;
         }
     },
     getIconName: function () {
@@ -137,10 +184,14 @@ AFRAME.registerComponent('sxr-icon-label-button', {
             icon,
             width: this.normalizedIconFontSize,
             height: this.normalizedIconFontSize,
-            color: this.data.fontColor
+            color: this.data.fontColor,
+            depthTest: this.data.iconOcclusion === true
         };
         // toggling swaps the icon on the existing canvas/texture
-        if (this.iconEntity && SXR.redrawIconEntity(this.iconEntity, options)) { return; }
+        if (this.iconEntity && SXR.redrawIconEntity(this.iconEntity, options)) {
+            this.iconEntity.setAttribute('position', `${iconEntityX} 0 0.05`);
+            return;
+        }
         if (this.iconEntity) {
             SXR.removeEntity(this.iconEntity);
             this.iconEntity = null;
@@ -151,12 +202,14 @@ AFRAME.registerComponent('sxr-icon-label-button', {
         this.el.appendChild(iconEntity);
     },
     setText: function (newText) {
-        const textEntityX = this.guiItem.height - this.guiItem.width*0.5;
-        const textWidth = Math.max(0.1, this.guiItem.width - this.guiItem.height - 0.12);
+        this.normalizedFontSize = SXR.normalizeFontSize(this.data.fontSize);
+        const guiItem = this.guiItem || SXR.getItem(this.el);
+        const textEntityX = guiItem.height - guiItem.width*0.5;
+        const textWidth = Math.max(0.1, guiItem.width - guiItem.height - 0.12);
         const options = {
             value: newText,
             width: textWidth,
-            height: this.guiItem.height * 0.72,
+            height: guiItem.height * 0.72,
             fontSize: this.normalizedFontSize,
             fontFamily: this.data.fontFamily,
             color: this.data.fontColor,
@@ -182,6 +235,7 @@ AFRAME.registerPrimitive( 'a-sxr-icon-label-button', {
         'onclick': 'sxr-interactable.clickAction',
         'onhover': 'sxr-interactable.hoverAction',
         'key-code': 'sxr-interactable.keyCode',
+        'key': 'sxr-interactable.key',
         //gui item general
         'width': 'sxr-item.width',
         'height': 'sxr-item.height',
@@ -199,8 +253,9 @@ AFRAME.registerPrimitive( 'a-sxr-icon-label-button', {
         'icon-active': 'sxr-icon-label-button.iconActive',
         'icon-font': 'sxr-icon-label-button.iconFont',
         'icon-font-size': 'sxr-icon-label-button.iconFontSize',
+        'icon-occlusion': 'sxr-icon-label-button.iconOcclusion',
         'value': 'sxr-icon-label-button.value',
         'toggle': 'sxr-icon-label-button.toggle',
-        'toggle-state': 'sxr-icon-label-button.toggleState'        
+        'toggle-state': 'sxr-icon-label-button.toggleState'
     }
 });

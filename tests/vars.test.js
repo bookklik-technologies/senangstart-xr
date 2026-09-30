@@ -4,8 +4,10 @@
 
 describe('vars.js utility functions', () => {
   beforeAll(() => {
+    global.AFRAME = {get THREE() { return global.THREE; }};
     require('../src/scripts/vars.js');
   });
+  afterAll(() => { delete global.AFRAME; });
 
   describe('getUniqueId', () => {
     test('returns a string with the given prefix', () => {

@@ -9,12 +9,14 @@ module.exports = [
     ignores: ['dist/**', 'examples/js/**', 'src/third-party/**'],
   },
   {
-    files: ['src/**/*.js'],
+    files: ['src/**/*.js', 'tests/**/*.js', 'scripts/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',
       globals: {
         ...globals.browser,
+        ...globals.node,
+        ...globals.jest,
         AFRAME: 'readonly',
         THREE: 'readonly',
         SXR: 'readonly',
@@ -22,8 +24,15 @@ module.exports = [
     },
     rules: {
       'no-console': 'warn',
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', {argsIgnorePattern: '^_'}],
       'no-var': 'warn',
+    },
+  },
+  {
+    // test output and CLI scripts legitimately print
+    files: ['tests/**/*.js', 'scripts/**/*.js'],
+    rules: {
+      'no-console': 'off',
     },
   },
 ];

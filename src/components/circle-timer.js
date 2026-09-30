@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-circle-timer', {
+    dependencies: ['sxr-item'],
     schema: {
         countDown: {type: 'number', default: 10 },
         fontSize: {type: 'number', default: 0.2},
@@ -14,11 +15,12 @@ AFRAME.registerComponent('sxr-circle-timer', {
 
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
+        const component = this;
+        const guiItem = SXR.getItem(el);
         this.guiItem = guiItem;
 
         this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
-        
+
         el.setAttribute('geometry', `primitive: plane; height: ${guiItem.height}; width: ${guiItem.height};`);
         el.setAttribute('material', `shader: flat; transparent: true; opacity: 1; side:back; color:${data.backgroundColor};`);
 
@@ -28,6 +30,7 @@ AFRAME.registerComponent('sxr-circle-timer', {
         timerContainer.setAttribute('rotation', '90 0 0');
         timerContainer.setAttribute('position', '0 0 0.01');
         el.appendChild(timerContainer);
+        this.timerContainer = timerContainer;
 
         const timerIndicator1 = document.createElement("a-ring");
         timerIndicator1.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.borderColor}`);
@@ -37,6 +40,7 @@ AFRAME.registerComponent('sxr-circle-timer', {
         timerIndicator1.setAttribute('theta-length', '3');
         timerIndicator1.setAttribute('position', '0 0 0.04');
         el.appendChild(timerIndicator1);
+        this.timerIndicator1 = timerIndicator1;
         const timerIndicator2 = document.createElement("a-ring");
         timerIndicator2.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.borderColor}`);
         timerIndicator2.setAttribute('radius-inner', `${guiItem.height/3}`);
@@ -45,6 +49,7 @@ AFRAME.registerComponent('sxr-circle-timer', {
         timerIndicator2.setAttribute('theta-length', '3');
         timerIndicator2.setAttribute('position', '0 0 0.04');
         el.appendChild(timerIndicator2);
+        this.timerIndicator2 = timerIndicator2;
         const timerIndicator3 = document.createElement("a-ring");
         timerIndicator3.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.borderColor}`);
         timerIndicator3.setAttribute('radius-inner', `${guiItem.height/3}`);
@@ -53,6 +58,7 @@ AFRAME.registerComponent('sxr-circle-timer', {
         timerIndicator3.setAttribute('theta-length', '3');
         timerIndicator3.setAttribute('position', '0 0 0.04');
         el.appendChild(timerIndicator3);
+        this.timerIndicator3 = timerIndicator3;
         const timerIndicator4 = document.createElement("a-ring");
         timerIndicator4.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.borderColor}`);
         timerIndicator4.setAttribute('radius-inner', `${guiItem.height/3}`);
@@ -61,6 +67,7 @@ AFRAME.registerComponent('sxr-circle-timer', {
         timerIndicator4.setAttribute('theta-length', '3');
         timerIndicator4.setAttribute('position', '0 0 0.04');
         el.appendChild(timerIndicator4);
+        this.timerIndicator4 = timerIndicator4;
 
         const timerRing = document.createElement("a-ring");
         timerRing.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.activeColor}`);
@@ -80,6 +87,41 @@ AFRAME.registerComponent('sxr-circle-timer', {
         this._finished = false;
         this.setText(data.countDown);
 
+        // live sxr-item updates (dimensions) rebuild the geometry
+        this._onItemChanged = SXR.watchGuiItem(el, function () {
+            component._rebuild();
+        });
+
+    },
+    // dispose owned geometry and rebuild from current sxr-item data
+    _rebuild: function () {
+        const el = this.el;
+        const previousItemKey = this._itemKey;
+        this.guiItem = SXR.getItem(el);
+        const guiItem = this.guiItem;
+        this._itemKey = [guiItem.width, guiItem.height].join('|');
+        if (previousItemKey !== undefined && previousItemKey === this._itemKey) { return; }
+
+        el.setAttribute('geometry', `primitive: plane; height: ${guiItem.height}; width: ${guiItem.height};`);
+        if (this.timerContainer) {
+            this.timerContainer.setAttribute('geometry', `primitive: cylinder; radius: ${guiItem.height/2}; height: 0.02;`);
+        }
+        [this.timerIndicator1, this.timerIndicator2, this.timerIndicator3, this.timerIndicator4].forEach(function (indicator) {
+            if (indicator) {
+                indicator.setAttribute('radius-inner', `${guiItem.height/3}`);
+                indicator.setAttribute('radius-outer', `${guiItem.height/2}`);
+            }
+        });
+        if (this.timerRing) {
+            this.timerRing.setAttribute('radius-inner', `${guiItem.height/3}`);
+            this.timerRing.setAttribute('radius-outer', `${guiItem.height/2}`);
+        }
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
+        this._lastSecond = null;
+        this.setText(Math.ceil(this.initCount));
     },
     tick: function (time) {
         const total = this.initCount;
@@ -110,6 +152,15 @@ AFRAME.registerComponent('sxr-circle-timer', {
     update: function (oldData) {
         const data = this.data;
         if (Object.keys(oldData).length === 0) { return; }
+        this.el.setAttribute('material', 'color', data.backgroundColor);
+        if (this.timerContainer) this.timerContainer.setAttribute('material', 'color', data.backgroundColor);
+        if (this.timerRing) this.timerRing.setAttribute('material', 'color', data.activeColor);
+        [this.timerIndicator1, this.timerIndicator2, this.timerIndicator3, this.timerIndicator4].forEach(indicator => {
+            if (indicator) indicator.setAttribute('material', 'color', data.borderColor);
+        });
+        if (['fontSize', 'fontFamily', 'fontColor'].some(key => data[key] !== oldData[key]) && this.textEntity) {
+            this.setText(this._lastSecond === null ? data.countDown : this._lastSecond);
+        }
         if (data.countDown !== oldData.countDown) {
             // restart the countdown with the new duration
             this.initCount = data.countDown;
@@ -123,12 +174,22 @@ AFRAME.registerComponent('sxr-circle-timer', {
         }
     },
     remove: function () {
+        const el = this.el;
+        el.removeEventListener('componentchanged', this._onItemChanged);
         if (this.textEntity) {
             SXR.removeEntity(this.textEntity);
             this.textEntity = null;
         }
+        const self = this;
+        ['timerContainer', 'timerRing', 'timerIndicator1', 'timerIndicator2', 'timerIndicator3', 'timerIndicator4'].forEach(function (key) {
+            if (self[key]) {
+                SXR.removeEntity(self[key]);
+                self[key] = null;
+            }
+        });
     },
     setText: function (newTime) {
+        this.normalizedFontSize = SXR.normalizeFontSize(this.data.fontSize);
         const options = {
             value: newTime,
             width: this.guiItem.height * 0.7,

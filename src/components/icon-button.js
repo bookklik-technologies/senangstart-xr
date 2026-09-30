@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-icon-button', {
+    dependencies: ['sxr-item', 'sxr-interactable'],
     schema: {
         on: {default: 'click'},
         toggle: {type: 'boolean', default: false},
@@ -9,6 +10,7 @@ AFRAME.registerComponent('sxr-icon-button', {
         iconActive: {type: 'string', default: ''},
         iconFontSize: {type: 'number', default: 0.4},
         iconFont: {type: 'string', default: ''},
+        iconOcclusion: {type: 'boolean', default: false},
         fontColor: {type: 'string', default: SXR.colors.onSurface},
         borderColor: {type: 'string', default: SXR.colors.border},
         backgroundColor: {type: 'string', default: SXR.colors.surface},
@@ -19,7 +21,8 @@ AFRAME.registerComponent('sxr-icon-button', {
 
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
+        const component = this;
+        const guiItem = SXR.getItem(el);
         this.guiItem = guiItem;
         this.normalizedFontSize = SXR.normalizeFontSize(data.iconFontSize);
         const guiInteractable = el.getAttribute("sxr-interactable");
@@ -47,40 +50,67 @@ AFRAME.registerComponent('sxr-icon-button', {
         this.setIcon(this.getIconName());
 
         this._onMouseEnter = function() {
-            buttonEntity.removeAttribute('animation__leave');
+            component.buttonEntity.removeAttribute('animation__leave');
             if (!(data.toggle)) {
-                buttonEntity.setAttribute('animation__enter', `property: material.color; from: ${data.backgroundColor}; to:${data.hoverColor}; dur:200;`);
+                component.buttonEntity.setAttribute('animation__enter', `property: material.color; from: ${data.backgroundColor}; to:${data.hoverColor}; dur:200;`);
             }
         };
         el.addEventListener('mouseenter', this._onMouseEnter);
         this._onMouseLeave = function() {
             if (!(data.toggle)) {
-                buttonEntity.removeAttribute('animation__click');
-                buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
+                component.buttonEntity.removeAttribute('animation__click');
+                component.buttonEntity.setAttribute('animation__leave', `property: material.color; from: ${data.hoverColor}; to:${data.backgroundColor}; dur:200; easing: easeOutQuad;`);
             }
-            buttonEntity.removeAttribute('animation__enter');
+            component.buttonEntity.removeAttribute('animation__enter');
         };
         el.addEventListener('mouseleave', this._onMouseLeave);
         this._onClick = function(event) {
             if (!(data.toggle)) { // if not toggling flashing active state
-                buttonEntity.setAttribute('animation__click', `property: material.color; from: ${data.activeColor}; to:${data.backgroundColor}; dur:400; easing: easeOutQuad;`);
+                component.buttonEntity.setAttribute('animation__click', `property: material.color; from: ${data.activeColor}; to:${data.backgroundColor}; dur:400; easing: easeOutQuad;`);
             }else{
-                el.components['sxr-icon-button'].setActiveState(!data.toggleState);
+                component.setActiveState(!data.toggleState);
             }
 
             const clickActionFunction = SXR.getActionFunction(guiInteractable && guiInteractable.clickAction);
             if (clickActionFunction) clickActionFunction(event);
         };
         el.addEventListener(data.on, this._onClick);
-        ////WAI ARIA Support
-        el.setAttribute('role', 'button');
 
+        // focused keyboard operation: Enter/Space activate (a bound key
+        // shortcut fires through the shared registry, so skip to avoid
+        // duplicate activation)
+        this._onKeyUp = function (event) {
+            if (event.isComposing || event.keyCode === 229 || event.repeat) { return; }
+            if (!(event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar')) { return; }
+            const interactable = el.components['sxr-interactable'];
+            if (interactable && interactable.matchesEvent && interactable.matchesEvent(event)) { return; }
+            event.preventDefault();
+            el.emit(data.on);
+        };
+        el.addEventListener('keyup', this._onKeyUp);
+
+        //WAI ARIA Support
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', this.getIconName());
+        this._onItemChanged = SXR.watchGuiItem(el, () => this._resize());
 
     },
     update: function (oldData) {
         const data = this.data;
+        const el = this.el;
         const hasOld = oldData && Object.keys(oldData).length > 0;
-        const iconKey = [this.getIconName(), data.fontColor, data.iconFontSize].join('|');
+        this.buttonContainer.setAttribute('material', 'color', data.borderColor);
+        this.buttonEntity.setAttribute('material', 'color', data.toggleState ? data.activeColor : data.backgroundColor);
+        if (data.toggle) el.setAttribute('aria-pressed', String(data.toggleState));
+
+        // rebind the activation listener when the event name changes
+        if (hasOld && data.on !== oldData.on) {
+            el.removeEventListener(oldData.on, this._onClick);
+            el.addEventListener(data.on, this._onClick);
+        }
+
+        const iconKey = [this.getIconName(), data.fontColor, data.iconFontSize, data.iconOcclusion].join('|');
         if (!hasOld || iconKey !== this._lastIconKey) {
             this._lastIconKey = iconKey;
             if (this.iconEntity) {
@@ -88,14 +118,32 @@ AFRAME.registerComponent('sxr-icon-button', {
             }
         }
     },
+    _resize: function () {
+        this.guiItem = SXR.getItem(this.el);
+        const {width, height} = this.guiItem;
+        this.el.setAttribute('geometry', {primitive: 'plane', width, height});
+        this.buttonContainer.setAttribute('geometry', {primitive: 'cylinder', radius: height / 2, height: 0.02});
+        this.buttonEntity.setAttribute('geometry', {primitive: 'cylinder', radius: height / 2.05, height: 0.04});
+        this.setIcon(this.getIconName());
+    },
     remove: function () {
         const el = this.el;
         el.removeEventListener('mouseenter', this._onMouseEnter);
         el.removeEventListener('mouseleave', this._onMouseLeave);
         el.removeEventListener(this.data.on, this._onClick);
+        el.removeEventListener('keyup', this._onKeyUp);
+        el.removeEventListener('componentchanged', this._onItemChanged);
         if (this.iconEntity) {
             SXR.removeEntity(this.iconEntity);
             this.iconEntity = null;
+        }
+        if (this.buttonContainer) {
+            SXR.removeEntity(this.buttonContainer);
+            this.buttonContainer = null;
+        }
+        if (this.buttonEntity) {
+            SXR.removeEntity(this.buttonEntity);
+            this.buttonEntity = null;
         }
     },
     getIconName: function () {
@@ -107,11 +155,13 @@ AFRAME.registerComponent('sxr-icon-button', {
         this.buttonEntity.setAttribute('material', 'color', activeState ? this.data.activeColor : this.data.backgroundColor);
     },
     setIcon: function (icon) {
+        this.normalizedFontSize = SXR.normalizeFontSize(this.data.iconFontSize);
         const options = {
             icon,
             width: this.normalizedFontSize,
             height: this.normalizedFontSize,
-            color: this.data.fontColor
+            color: this.data.fontColor,
+            depthTest: this.data.iconOcclusion === true
         };
         // toggling swaps the icon on the existing canvas/texture
         if (this.iconEntity && SXR.redrawIconEntity(this.iconEntity, options)) { return; }
@@ -138,6 +188,7 @@ AFRAME.registerPrimitive( 'a-sxr-icon-button', {
         'onclick': 'sxr-interactable.clickAction',
         'onhover': 'sxr-interactable.hoverAction',
         'key-code': 'sxr-interactable.keyCode',
+        'key': 'sxr-interactable.key',
         //gui item general
         'width': 'sxr-item.width',
         'height': 'sxr-item.height',
@@ -153,6 +204,7 @@ AFRAME.registerPrimitive( 'a-sxr-icon-button', {
         'icon-active': 'sxr-icon-button.iconActive',
         'icon-font': 'sxr-icon-button.iconFont',
         'icon-font-size': 'sxr-icon-button.iconFontSize',
+        'icon-occlusion': 'sxr-icon-button.iconOcclusion',
         'toggle': 'sxr-icon-button.toggle',
         'toggle-state': 'sxr-icon-button.toggleState'
     }

@@ -5,7 +5,7 @@
   <title>SenangStart XR - Component Showcase</title>
   <meta name="description" content="A complete SenangStart XR component showcase for A-Frame and WebXR">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="js/senangstart-xr.js?v=20260906-text-redraw-fix"></script>
+  <script src="js/senangstart-xr.js?v=20260930-transparent-controls"></script>
   <script>
     const DEMO_FONT = '../Outfit-Regular.ttf';
 
@@ -87,12 +87,15 @@
     }
 
     function onInputClick() {
-      const input = document.querySelector('#demoInput');
-      if (!input || !input.components['sxr-input']) {
-        return;
-      }
-      input.components['sxr-input'].appendText('!');
-      setStatus('Input helper appended a character');
+      setStatus('Input activated: type with your keyboard (Enter commits)');
+    }
+
+    function onInputEdit(evt) {
+      setMetric('#clickMetric', `Input: ${evt.detail ? evt.detail.value : ''}`);
+    }
+
+    function onInputCommit(evt) {
+      setStatus(`Input committed: "${evt.detail ? evt.detail.value : ''}"`);
     }
 
     function onSlide(_event, percent) {
@@ -159,10 +162,33 @@
     window.addEventListener('load', function () {
       setInterval(tickTimer, 1000);
       setInterval(cycleProgress, 2400);
+
+      const input = document.querySelector('#demoInput');
+      if (input) {
+        input.addEventListener('input', onInputEdit);
+        input.addEventListener('change', onInputCommit);
+      }
+      const scene = document.querySelector('a-scene');
+      const cursor = document.querySelector('#cursor');
+      const setPointerMode = function (immersive) {
+        cursor.setAttribute('cursor', 'rayOrigin', immersive ? 'entity' : 'mouse');
+        cursor.setAttribute('visible', immersive);
+      };
+      setPointerMode(false);
+      scene.addEventListener('enter-vr', () => setPointerMode(true));
+      scene.addEventListener('exit-vr', () => setPointerMode(false));
+      document.querySelector('#gazeMode').addEventListener('change', function (event) {
+        cursor.setAttribute('cursor', 'fuse', event.target.checked);
+        cursor.setAttribute('cursor', 'rayOrigin', event.target.checked ? 'entity' : 'mouse');
+        cursor.setAttribute('visible', event.target.checked);
+      });
     });
   </script>
 </head>
 <body>
+  <label style="position:fixed;left:12px;top:12px;z-index:10;color:#F1F5F9;background:#202127;padding:8px;font:14px sans-serif">
+    <input id="gazeMode" type="checkbox"> Gaze selection (desktop: click/tap or Tab to controls)
+  </label>
   <a-scene background="color: #161618">
     <a-assets>
       <img id="gridTexture" alt="subtle grid" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23161618'/%3E%3Cpath d='M0 24H96M0 48H96M0 72H96M24 0V96M48 0V96M72 0V96' stroke='%231B1B1F' stroke-width='1' opacity='.72'/%3E%3C/svg%3E">
@@ -180,6 +206,8 @@
           position="0 0 -1">
         </a-sxr-cursor>
       </a-camera>
+      <a-entity laser-controls="hand: left" raycaster="objects: [sxr-interactable]"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: [sxr-interactable]"></a-entity>
     </a-entity>
 
     <!-- <a-entity geometry="primitive: plane; width: 15; height: 8"
@@ -216,12 +244,12 @@
         margin="0.03 0 0.04 0"></a-sxr-label>
 
       <a-sxr-label width="3.05" height="0.62"
-        value="3D GUI primitives for A-Frame: layouts, controls, cursors and WebXR-ready interaction."
+        value="3D GUI primitives for A-Frame. Desktop: click or Tab to a widget — Enter/Space activate, arrows adjust sliders, 'b' presses the primary button."
         font-color="#ffffff"
         background-color="#202127"
         opacity="0"
-        font-size="0.145"
-        line-height="0.2"
+        font-size="0.135"
+        line-height="0.19"
         text-depth="0.08"
         text-stroke-width="0"
         margin="0.02 0 0.08 0"></a-sxr-label>
@@ -229,7 +257,7 @@
       <a-sxr-button width="2.8" height="0.54"
         value="Primary Button"
         onclick="onPrimaryClick"
-        key-code="13"
+        key="b"
         font-color="#F1F5F9"
         border-color="#1B1B1F"
         background-color="#202127"
@@ -257,6 +285,7 @@
         width="2.8"
         height="0.5"
         value="Interactive input"
+        native-editing="true"
         onclick="onInputClick"
         background-color="#F1F5F9"
         border-color="#2563EB"
@@ -358,6 +387,7 @@
       <a-sxr-toggle width="2.9" height="0.48"
         value="Toggle inspect mode"
         onclick="onToggle"
+        key="t"
         font-size="0.15"
         background-color="#F1F5F9"
         border-color="#1B1B1F"

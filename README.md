@@ -26,6 +26,16 @@ The `dist/senangstart-xr.js` file defines the following components:
 | sxr-circle-loader     | a-sxr-circle-loader      | Circular progress meter                                  |
 | sxr-circle-timer      | a-sxr-circle-timer       | Circular progress meter with timer                       |
 
+## A-Frame version support
+
+Supported A-Frame versions are **1.7.x and 1.8.x** (peer dependency
+`>=1.7.0 <1.9.0`). The library is validated against the pinned releases
+[1.7.0](https://aframe.io/releases/1.7.0/aframe.min.js),
+1.7.1 and
+[1.8.0](https://aframe.io/blog/aframe-v1.8.0/). Earlier A-Frame versions
+(including 1.4.x, shown in some legacy snippets) are no longer tested
+against this library.
+
 
 ## Brand colors
 
@@ -50,32 +60,40 @@ The `dist/senangstart-xr.js` file defines the following components:
 
 ### Text font
 
-The default font family is `Outfit-Regular.ttf` (`SXR.fonts.default`). When a
-font **filename** (`*.ttf` / `*.otf` / `*.woff` / `*.woff2`) is passed, the
-canvas renderer tries to register it through the FontFace API (resolved
-relative to the page URL). While the font loads — or when FontFace is
-unavailable — text renders with the system font stack
-(`Arial, Helvetica, sans-serif`); once loaded, subsequent text redraws use the
-registered family. To use a custom font directly, pass a font-family name that
-is already available to the canvas 2D context (e.g. `font-family="Arial"`).
-`Outfit-Regular.ttf` at the repo root (also under `examples/`) is the bundled
-design asset.
+The default font family is `Outfit-Regular.ttf` (`SXR.fonts.default`), which is
+**packaged with the npm tarball** and resolved relative to the bundle script
+URL. When a font **filename** (`*.ttf` / `*.otf` / `*.woff` / `*.woff2`) is
+passed, the canvas renderer registers it through the FontFace API; concurrent
+loads of the same file are shared, and any text already rendered while the
+font was loading is redrawn automatically once the font resolves. While the
+font loads — or when FontFace is unavailable — text renders with the system
+font stack (`Arial, Helvetica, sans-serif`). To use a custom font directly,
+pass a font-family name that is already available to the canvas 2D context
+(e.g. `font-family="Arial"`); custom font files resolve relative to the page
+URL. Builds copy `Outfit-Regular.ttf` beside each bundle in `dist/` and
+`examples/js/`; the source font remains at the repository root.
 
+### Occlusion (opt-in)
 
+By default widget text and icons always draw on top of scene geometry (legacy
+rendering). Applications that want scene geometry to occlude labels can opt
+in per widget:
 
+- `text-occlusion="true"` on `a-sxr-label`
+- `icon-occlusion="true"` on `a-sxr-icon-button` and `a-sxr-icon-label-button`
 
 ## Examples
 
 A ready-to-run demo scene is included at [`examples/index.html`](examples/index.html).
-Open it in a browser (serve the folder over HTTP, e.g. `npx serve .`) to see the
-widgets in action.
+Open it in a browser (serve the folder over HTTP, e.g. `npx serve .`) to see
+the widgets in action.
 
 ## Use in your A-Frame project
 
 Include A-Frame, then the SenangStart XR bundle, in the `<head>` of your page:
 
 ```html
-<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 <!-- local build -->
 <script src="dist/senangstart-xr.js"></script>
 ```
@@ -89,9 +107,10 @@ section below and `examples/index.html`).
 npm install senangstart-xr
 ```
 
-A-Frame is a peer dependency and must be loaded on the page first. The package
-ships the built bundles in `dist/`; reference `dist/senangstart-xr.min.js` via
-a `<script>` tag (the bundle registers its components against the global
+A-Frame is a peer dependency (supported range: `>=1.7.0 <1.9.0`) and must be
+loaded on the page first. The package ships the built bundles and the bundled
+font in `dist/` / package root; reference `dist/senangstart-xr.min.js` via a
+`<script>` tag (the bundle registers its components against the global
 `AFRAME` object and is not `require()`-able):
 
 ```html
@@ -102,8 +121,11 @@ a `<script>` tag (the bundle registers its components against the global
 CDN usage (after publishing):
 
 ```html
-<script src="https://unpkg.com/senangstart-xr/dist/senangstart-xr.min.js"></script>
+<script src="https://unpkg.com/senangstart-xr@2.1.0/dist/senangstart-xr.min.js"></script>
 ```
+
+Pin the version in CDN URLs — unpkg/jsdelivr redirects of unversioned URLs can
+serve a different release than the one you tested against.
 
 ### Interaction notes
 
@@ -112,10 +134,67 @@ CDN usage (after publishing):
   loads. A typo silently no-ops. Modern integrations can skip globals entirely
   and listen to the widget's own events
   (`el.addEventListener('click', handler)`).
-- Keyboard activation (`key-code`) is registered per widget; binding the same
-  key to multiple widgets fires all of them.
+- Keyboard activation is registered per widget; binding the same key to
+  multiple widgets fires all of them.
+- Shortcuts (`key` / `key-code`) are ignored while the user is typing into a
+  text field, during IME composition, and for auto-repeated keydowns.
 - Widgets declare ARIA roles and are keyboard-reachable (`tabindex="0"` on
-  button, toggle, radio).
+  button, toggle, radio, sliders, input).
+
+### Keyboard operation (desktop)
+
+When a widget holds DOM focus (click it, or Tab to it):
+
+| Widget            | Keys                                                       |
+| ----------------- | ---------------------------------------------------------- |
+| Button            | `Enter` / `Space` activate                                  |
+| Toggle            | `Enter` / `Space` flip the state (disabled widgets ignore)  |
+| Radio             | `Space` selects; arrow keys move through the group          |
+| Slider            | `←`/`→` (and `↑`/`↓`) step by `keyboard-step`; `Home`/`End` jump to 0/1 |
+| Vertical slider   | `↑`/`↓` (and `←`/`→`) step by `keyboard-step`; `Home`/`End` jump to 0/1 |
+| Input             | `Enter` / `Space` activate; native editing requires `native-editing="true"` |
+
+`key="e"` (textual) works independently of the legacy numeric `key-code="32"`;
+when a widget's own shortcut key matches the focused key press, only the
+shortcut fires (no duplicate activation).
+
+### Live attribute updates
+
+Widget attributes can be changed after initialization (via
+`setAttribute` or the mapped primitive attributes); the following update
+live without recreating the widget:
+
+- **Dimensions** (`width`, `height`, `depth`, ... on `a-sxr-*` primitives):
+  geometry, bars, borders and label boxes rebuild to fit.
+- **Colors** (font, border, background, hover, active, handle): resting and
+  label colors refresh; animations continue to use the new values.
+- **Labels** (`value` on buttons, toggles, radios, labels, inputs): the text
+  redraws in place and the accessible name (`aria-label`) stays in sync.
+- **Activation event names** (`on="tap"`): the activation listener rebinds to
+  the new event name.
+- **States** (`checked`, `percent`, `loaded`, `count-down`, `hover-percent`):
+  visuals and `aria-checked` / `aria-valuenow` follow.
+- **Layout properties** on `a-sxr-flex-container`: children relayout, including
+  after programmatic child insertion and removal.
+
+Horizontal-slider callbacks receive `(event, percent)`. Vertical-slider
+callbacks receive `(percent)` for both pointer and keyboard activation.
+
+Container style attributes map to flat component properties (`fontColor`,
+`fontFamily`, etc.). Programmatic legacy objects remain supported through
+`setAttribute('sxr-flex-container', 'styles', {fontColor: '#fff'})`.
+Explicit container properties override legacy object values. Inherited
+styles update until a child supplies its own style value.
+
+### Accessibility limitations
+
+- Widget ARIA roles/labels live on 3D entities; screen readers do not
+  announce them. Keyboard operation is provided for sighted keyboard users.
+- Immersive (VR) text entry is application-provided; the release does not
+  bundle a Quest virtual keyboard. On desktop, enable opt-in native editing
+  (see `a-sxr-input`) to type with a real keyboard.
+- Focus indicators are visual only (widget border/focus colors); there is no
+  roving-tabindex container for flex layouts.
 
 ## License
 
@@ -124,7 +203,7 @@ CDN usage (after publishing):
 
 ## Building
 
-Build the production bundle to `dist/` (`senangstart-xr.min.js` + source map):
+Build development and production bundles, source map, and font to `dist/`:
 
 `npm run dist`
 
@@ -137,6 +216,15 @@ Build to the examples/js folder:
 `npm run dist-example`
 
 `npm run dist-example-min`
+
+`npm run dist:all` builds both distributions. `npm run check:build` compares
+bundle, source-map, and font copies. `npm run check:package` packs and installs
+the tarball with A-Frame in a temporary consumer; failed installs fail the check.
+
+CI runs Chromium integration checks against A-Frame 1.7.0, 1.7.1, and 1.8.0,
+with each bundle. Screenshots and resource counts are uploaded as artifacts.
+The runner requires Playwright and its Chromium installation. Its existence
+does not establish a passing result; see [AUDIT.md](AUDIT.md) for current gates.
 
 
 ## Run locally
@@ -158,7 +246,7 @@ The webpack-dev-server should now be running at http://localhost:8080
 | flex-direction   | property specifies how flex items are placed in the flex container defining the main axis and the direction: 'row', 'column'                                       | 'row'         |
 | justify-content  | property defines distributed space between and around content items along the main axis of their container: 'flexStart','center','flexEnd'                         | 'flexStart'   |
 | align-items      | property defines distributed space between and around flex items along the cross-axis of their container. Like justify-content but in the perpendicular direction. | 'flexStart'   |
-| item-padding     | Padding between items                                                                                                                                              | 0.0           |
+| item-padding     | Spacing between children (children relayout automatically after insert, removal, resize or layout changes)                                                                                                                          | 0.0           |
 | opacity          | Transparency of the flex-conntainer                                                                                                                                | 0.0           |
 | is-top-container | Setting background of the flex-container                                                                                                                           | false         |
 | panel-color      | Background color of the flex-container                                                                                                                             | #202127       |
@@ -265,6 +353,8 @@ a controller model).
 | active-color       | Background color when button is pressed down              | #2563EB       |
 | toggle             | If true, button acts as toggle button with on/off state   | false         |
 | toggle-state       | Setting the toggle button on/off state                    | false         |
+| key                | Textual shortcut key that activates the widget (e.g. 'e') |               |
+| key-code           | Legacy numeric shortcut key (e.g. 32 for Space)           | -1            |
 
 | width              | Width of button                                           | 1             |
 | height             | Height of button                                          | 1             |
@@ -371,16 +461,18 @@ a controller model).
 | --------           | -------------------------------------------------------   | ------------- |
 | on                 | Event that triggers onclick action                        | click         |
 
-| icon               | SenangStart icon slug, e.g. `check`, `play`, `cog-6-tooth` | check         |
-| icon-active        | Icon slug for the active state                            | ''            |
-| icon-font          | Legacy option retained for compatibility                  | ''            |
-| icon-font-size     | Icon size for button                                      | 0.4           |
-
 | font-color         | Text color for button label                               | #F1F5F9       |
 | border-color       | Border color of button                                    | #1B1B1F       |
 | background-color   | Background color of item                                  | #202127       |
 | hover-color        | Background color when button is in hover state            | #0EA5E9       |
 | active-color       | Background color when button is pressed down              | #2563EB       |
+| icon               | SenangStart icon slug, e.g. `check`, `play`, `cog-6-tooth` | check         |
+| icon-active        | Icon slug for the active state                            | ''            |
+| icon-font          | Legacy option retained for compatibility                  | ''            |
+| icon-font-size     | Icon size for button                                      | 0.4           |
+| icon-occlusion     | Let scene geometry occlude the icon (opt-in depth test)   | false         |
+| key                | Textual shortcut key that activates the widget (e.g. 'e') |               |
+| key-code           | Legacy numeric shortcut key (e.g. 32 for Space)           | -1            |
 | toggle             | Toggle status                                             | false         |
 | toggle-state       | Setting the toggle button on/off state                    | false         |
 
@@ -405,10 +497,13 @@ a controller model).
 | --------         | ----------------------------------------------------   | ------------- |
 | on               | Event that triggers onclick action                     | click         |
 
-| icon             | SenangStart icon slug, e.g. `check`, `sparkles`        | check         |
+| icon              | SenangStart icon slug, e.g. `check`, `sparkles`        | check         |
 | icon-active      | Icon slug for the active state                         | ''            |
 | icon-font        | Legacy option retained for compatibility               | ''            |
 | icon-font-size   | Icon size for button                                   | 0.35          |
+| icon-occlusion   | Let scene geometry occlude the icon (opt-in depth test) | false        |
+| key              | Textual shortcut key that activates the widget (e.g. 'e') |            |
+| key-code         | Legacy numeric shortcut key (e.g. 32 for Space)        | -1            |
 
 | font-color       | Text color for button label                            | #F1F5F9       |
 | value            | Text of button label                                   | ''            |
@@ -446,6 +541,9 @@ a controller model).
 | onclick            | Function to call on click event                       |                |
 | onhover            | Function to call on hover event                       |                |
 | value              | Input text value                                      |                |
+| native-editing     | Opt-in: activation focuses a synchronized native text field; emits `input` on changes and `change` on commit | false |
+| key                | Textual shortcut key that activates the widget (e.g. 'e') |            |
+| key-code           | Legacy numeric shortcut key (e.g. 32 for Space)       | -1            |
 
 | font-size          | Font size for input                                   | 0.2            |
 | font-family        | Font family for input                                 | Outfit-Regular.ttf |
@@ -471,6 +569,28 @@ a controller model).
 </a-sxr-input>
 ```
 
+#### Native text editing (opt-in)
+
+By default the input is a canvas-rendered field updated programmatically
+(`appendText()`, `delete()`, or the `value` attribute). Adding
+`native-editing="true"` makes activation (click / keyboard activation) focus a
+visually hidden, labelled native `<input>` kept in sync with the widget: typing, arrow-key
+caret/selection movement, paste and IME composition all work with the real
+keyboard, `input` events fire as the text changes, and `change` fires on
+commit (`Enter` or losing focus), once per changed value. Setting
+`native-editing="false"` commits any pending edit and removes the native field.
+
+```html
+<a-sxr-input width="2.8" height="0.5"
+	native-editing="true"
+	value="Type here"
+	margin="0 0 0.05 0">
+</a-sxr-input>
+```
+
+Immersive (VR) text entry remains application-provided; this opt-in targets
+desktop keyboard use.
+
 
 ### a-sxr-label Component
 #### Properties
@@ -489,6 +609,7 @@ a controller model).
 | opacity          | Opacity of the label background                         | 1.0            |
 
 | text-depth       | distance from the text to label background              | 0.01           |
+| text-occlusion   | Let scene geometry occlude the text (opt-in depth test)  | false          |
 | text-stroke-color  | Color of the text stroke (canvas stroke style)        | ''             |
 | text-stroke-width   | Width of the text stroke (-1 disables)               | -1             |
 | height           | Height of item                                          | 1              |
@@ -554,8 +675,10 @@ a controller model).
 | active-color     | Background color when radio button is pressed down        | #2563EB        |
 | radiosizecoef    | Scale factor for the radio circle size                    | 1              |
 
-| height           | Height of radio button                                    | 1              |
+| key              | Textual shortcut key that activates the widget (e.g. 'e') |            |
+| key-code         | Legacy numeric shortcut key (e.g. 32 for Space)        | -1            |
 | width            | Width of radio button                                     | 1              |
+| height           | Height of radio button                                    | 1              |
 | margin           | Margin around radio button                                | 0 0 0 0        |
 
 ```html
@@ -585,6 +708,9 @@ a controller model).
 | handle-inner-depth  | Depth of the inner handle                                 | 0.02           |
 | height              | Height of item                                            | 1              |
 | hover-color         | Handle color while hovering                               | #0EA5E9        |
+| keyboard-step       | Percent added/removed per arrow-key press when focused    | 0.05           |
+| key                 | Textual shortcut key that activates the widget (e.g. 'e') |                |
+| key-code            | Legacy numeric shortcut key (e.g. 13 for Enter)           | -1             |
 | left-right-padding  | Padding applied to the track width                        | 0.25           |
 | margin              | Margin around item                                        | 0 0 0 0        |
 | onclick             | Javascript function to execute on click                   |               |
@@ -612,6 +738,8 @@ a controller model).
 | Property         | Description                                               | Default Value  |
 | --------         | -------------------------------------------------------   | -------------- |
 | on               | Event that triggers onclick action                        | click          |
+| key              | Textual shortcut key that activates the widget (e.g. 'e') |                |
+| key-code         | Legacy numeric shortcut key (e.g. 32 for Space)           | -1             |
 | checked          | Whether the toggle is on                                  | false          |
 | active           | Whether the toggle is enabled                             | true           |
 | toggle           | Toggle status                                             | false          |
@@ -662,6 +790,9 @@ a controller model).
 | hover-height        |  Height of label indicating where user is hovering        | 0.35           |
 | hover-percent       | Current percentage where user is hovering                 |                |
 | hover-width         | Width of label indicating where user is hovering          | 0.7            |
+| keyboard-step       | Percent added/removed per arrow-key press when focused    | 0.05           |
+| key                 | Textual shortcut key that activates the widget (e.g. 'e') |                |
+| key-code            | Legacy numeric shortcut key (e.g. 13 for Enter)           | -1             |
 | margin              | Margin around item                                        | '0 0 0 0'      |
 | onclick             | Javascript function to execute on click                   |                |
 | onhover             | Javascript function to execute on hover                   |                |

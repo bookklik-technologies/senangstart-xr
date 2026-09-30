@@ -1,6 +1,7 @@
 'use strict';
 
 AFRAME.registerComponent('sxr-circle-loader', {
+    dependencies: ['sxr-item'],
     schema: {
         loaded: {type: 'number', default: 0.5 },
         fontSize: {type: 'number', default: 0.2},
@@ -13,7 +14,8 @@ AFRAME.registerComponent('sxr-circle-loader', {
 
         const data = this.data;
         const el = this.el;
-        const guiItem = el.getAttribute("sxr-item");
+        const component = this;
+        const guiItem = SXR.getItem(el);
         this.guiItem = guiItem;
 
         this.normalizedFontSize = SXR.normalizeFontSize(data.fontSize);
@@ -27,6 +29,7 @@ AFRAME.registerComponent('sxr-circle-loader', {
         loaderContainer.setAttribute('rotation', '90 0 0');
         loaderContainer.setAttribute('position', '0 0 0.01');
         el.appendChild(loaderContainer);
+        this.loaderContainer = loaderContainer;
 
         const loaderRing = document.createElement("a-ring");
         loaderRing.setAttribute('material', `shader: flat; opacity: 1; side:double; color: ${data.activeColor}`);
@@ -41,10 +44,42 @@ AFRAME.registerComponent('sxr-circle-loader', {
 
         this.setText(data.loaded);
 
+        // live sxr-item updates (dimensions) rebuild the geometry
+        this._onItemChanged = SXR.watchGuiItem(el, function () {
+            component._rebuild();
+        });
 
     },
-    update: function (_oldData) {
+    // dispose owned geometry and rebuild from current sxr-item data
+    _rebuild: function () {
+        const el = this.el;
+        const previousItemKey = this._itemKey;
+        this.guiItem = SXR.getItem(el);
+        const guiItem = this.guiItem;
+        this._itemKey = [guiItem.width, guiItem.height].join('|');
+        if (previousItemKey !== undefined && previousItemKey === this._itemKey) { return; }
+
+        const data = this.data;
+        el.setAttribute('geometry', `primitive: plane; height: ${guiItem.height}; width: ${guiItem.height};`);
+        if (this.loaderContainer) {
+            this.loaderContainer.setAttribute('geometry', `primitive: cylinder; radius: ${guiItem.height/2}; height: 0.02;`);
+        }
         if (this.loaderRing) {
+            this.loaderRing.setAttribute('radius-inner', `${guiItem.height/3}`);
+            this.loaderRing.setAttribute('radius-outer', `${guiItem.height/2}`);
+            this.loaderRing.setAttribute('theta-length', `${Math.abs(data.loaded) * 360}`);
+        }
+        if (this.textEntity) {
+            SXR.removeEntity(this.textEntity);
+            this.textEntity = null;
+        }
+        this.setText(data.loaded);
+    },
+    update: function (_oldData) {
+        this.el.setAttribute('material', 'color', this.data.backgroundColor);
+        if (this.loaderContainer) this.loaderContainer.setAttribute('material', 'color', this.data.backgroundColor);
+        if (this.loaderRing) {
+            this.loaderRing.setAttribute('material', 'color', this.data.activeColor);
             this.loaderRing.setAttribute('theta-length', `${Math.abs(this.data.loaded) * 360}`);
         }
         if (this.textEntity) {
@@ -52,12 +87,23 @@ AFRAME.registerComponent('sxr-circle-loader', {
         }
     },
     remove: function () {
+        const el = this.el;
+        el.removeEventListener('componentchanged', this._onItemChanged);
         if (this.textEntity) {
             SXR.removeEntity(this.textEntity);
             this.textEntity = null;
         }
+        if (this.loaderContainer) {
+            SXR.removeEntity(this.loaderContainer);
+            this.loaderContainer = null;
+        }
+        if (this.loaderRing) {
+            SXR.removeEntity(this.loaderRing);
+            this.loaderRing = null;
+        }
     },
     setText: function (newLoaded) {
+        this.normalizedFontSize = SXR.normalizeFontSize(this.data.fontSize);
         const options = {
             value: Math.round(newLoaded * 100),
             width: this.guiItem.height * 0.7,
