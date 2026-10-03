@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SenangStart XR — Controls demo</title>
   <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
-  <script src="senangstart-xr.min.js"></script>
+  <script src="senangstart-xr.min.js?v=20261004-rounded-buttons"></script>
   <style>
     html, body { margin: 0; height: 100%; background: #161618; overflow: hidden; }
     .hint {
@@ -39,14 +39,14 @@
                           panel-color="#202127" panel-rounded="0.08"
                           position="-0.9 1.4 -2.6">
       <a-sxr-label value="Buttons" font-size="0.1" height="0.3" width="1.6"></a-sxr-label>
-      <a-sxr-button width="1.6" height="0.4" value="Press me"
+      <a-sxr-button width="1.6" height="0.4" value="Rounded button" radius="0.1"
                     onclick="onPress" key="b" background-color="#202127"></a-sxr-button>
       <a-sxr-icon-button width="0.4" height="0.4" icon="cog-6-tooth"
                          icon-active="check" onclick="onPress"></a-sxr-icon-button>
       <a-sxr-icon-label-button width="1.6" height="0.4" icon="sparkles"
                               value="Generate" font-size="0.09"
                               onclick="onPress"></a-sxr-icon-label-button>
-      <a-sxr-button width="1.6" height="0.4" value="Latching" toggle="true"
+      <a-sxr-button width="1.6" height="0.4" value="Pill toggle" radius="0.2" toggle="true"
                     toggle-state="false" onclick="onToggle"></a-sxr-button>
     </a-sxr-flex-container>
 

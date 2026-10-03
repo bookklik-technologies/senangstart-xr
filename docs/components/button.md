@@ -1,7 +1,7 @@
 # Button
 
 A standard button with a text label. Supports hover/active color animations,
-an optional toggle mode, focus color, optional bevel, and keyboard activation
+an optional toggle mode, focus color, rounded corners, optional bevel, and keyboard activation
 via `Enter` / `Space`.
 
 <DemoWidget title="Buttons in a live scene" src="/senangstart-xr/demo/controls.html" height="400" />
@@ -32,7 +32,7 @@ via `Enter` / `Space`.
 | base-depth         | Depth of the base of the button                           | 0.01          |
 | gap                | Gap between button and base                               | 0.025         |
 | margin             | Margin around button                                      | 0 0 0 0       |
-| radius             | Corner radius of the button base                          | 0             |
+| radius             | Corner radius shared by all four button corners           | 0             |
 
 | bevel              | If true, button bevel is enabled                          | false         |
 | bevel-segments     | Segments of the button bevel                              | 5             |
@@ -65,6 +65,27 @@ via `Enter` / `Space`.
 	bevel="true"
 >
 </a-sxr-button>
+```
+
+## Rounded corners
+
+Set `radius` to a positive value in scene units to round all four corners of
+the base and button face. The default, `0`, keeps the square appearance.
+Rounded corners work with or without `bevel="true"`.
+
+```html
+<a-sxr-button value="Continue" width="2" height="0.6" radius="0.12"></a-sxr-button>
+```
+
+The radius is clamped to half the smaller dimension; a larger value produces
+a pill-shaped button. The face radius is reduced by `gap / 2` to keep the
+border consistent. Negative or non-finite radii behave as `0`.
+
+You can change `radius`, `width`, or `height` after initialization and the
+geometry updates automatically:
+
+```js
+button.setAttribute('radius', '0.2')
 ```
 
 ## Interaction

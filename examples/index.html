@@ -5,7 +5,7 @@
   <title>SenangStart XR - Component Showcase</title>
   <meta name="description" content="A complete SenangStart XR component showcase for A-Frame and WebXR">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="js/senangstart-xr.js?v=20260930-radio-zoom"></script>
+  <script src="js/senangstart-xr.js?v=20261004-rounded-buttons"></script>
   <script>
     const DEMO_FONT = '../Outfit-Regular.ttf';
 
@@ -51,11 +51,11 @@
     function onPrimaryClick() {
       state.clicks += 1;
       setMetric('#clickMetric', `Clicks ${state.clicks}`);
-      setStatus(`Primary action fired ${state.clicks} time${state.clicks === 1 ? '' : 's'}`);
+      setStatus(`Rounded button pressed ${state.clicks} time${state.clicks === 1 ? '' : 's'}`);
     }
 
     function onBevelClick() {
-      setStatus('Beveled CTA pressed - depth, gap and bevel styling are active');
+      setStatus('Rounded beveled CTA pressed - rounded corners and bevel styling are active');
     }
 
     function onIconClick() {
@@ -249,7 +249,8 @@
         margin="0.02 0 0.08 0"></a-sxr-label>
 
       <a-sxr-button width="2.8" height="0.54"
-        value="Primary Button"
+        value="Rounded Button"
+        radius="0.12"
         onclick="onPrimaryClick"
         key="b"
         font-color="#F1F5F9"
@@ -260,7 +261,8 @@
         margin="0.06 0 0.06 0"></a-sxr-button>
 
       <a-sxr-button width="2.8" height="0.58"
-        value="Beveled CTA"
+        value="Rounded Beveled CTA"
+        radius="0.16"
         onclick="onBevelClick"
         bevel="true"
         bevel-size="0.04"

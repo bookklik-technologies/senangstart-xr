@@ -52,12 +52,14 @@ AFRAME.registerComponent('sxr-button', {
 
 
         this._onFocus = function() {
+            component._isFocused = true;
             component.buttonContainer.setAttribute('material','color',`${data.focusColor}`);
         };
 
         el.addEventListener('focus', this._onFocus);
 
         this._onBlur = function() {
+            component._isFocused = false;
             component.buttonContainer.setAttribute('material','color', `${data.borderColor}`);
             if (!(data.toggle)) {
                 component.buttonEntity.removeAttribute('animation__click');
@@ -123,6 +125,8 @@ AFRAME.registerComponent('sxr-button', {
         const data = this.data;
         const el = this.el;
         const guiItem = this.guiItem || SXR.getItem(el);
+        const radius = Number.isFinite(guiItem.radius) ? Math.max(0, Math.min(guiItem.radius, guiItem.width / 2, guiItem.height / 2)) : 0;
+        this._radius = radius;
 
         el.setAttribute('geometry', `primitive: plane;
                                      height: ${guiItem.height};
@@ -130,10 +134,33 @@ AFRAME.registerComponent('sxr-button', {
                                      `);
         el.setAttribute('material', `shader: flat;
                                      transparent: true;
-                                     opacity: 0.5;
+                                     opacity: ${radius > 0 ? 0 : 0.5};
+                                     depthWrite: ${radius === 0};
                                      side:double;
                                      color:${data.backgroundColor};
                                      `);
+
+        // Keep the root plane raycastable, but give its visible backing the
+        // same outline as the rounded button so square corners do not show.
+        if (radius > 0) {
+            const buttonBacking = document.createElement('a-entity');
+            buttonBacking.setAttribute('rounded', {
+                width: guiItem.width,
+                height: guiItem.height,
+                radius: radius,
+                color: data.backgroundColor,
+                opacity: 0.5
+            });
+            buttonBacking.setAttribute('material', {
+                shader: 'flat',
+                transparent: true,
+                opacity: 0.5,
+                side: 'double',
+                color: data.backgroundColor
+            });
+            el.appendChild(buttonBacking);
+            this.buttonBacking = buttonBacking;
+        }
 
         const buttonContainer = document.createElement("a-entity");
 
@@ -147,6 +174,19 @@ AFRAME.registerComponent('sxr-button', {
                                                       bevelSize: ${guiItem.bevelSize};
                                                       `);
             buttonContainer.setAttribute('position', `0 0 0`);
+            if (radius > 0) {
+                buttonContainer.setAttribute('bevelbox', this._getCornerRadii(radius, guiItem.width * (1 - bevelsize_adjust), guiItem.height * (1 - bevelsize_adjust)));
+            }
+        }
+        else if (radius > 0) {
+            buttonContainer.setAttribute('bevelbox', {
+                width: guiItem.width,
+                height: guiItem.height,
+                depth: guiItem.baseDepth,
+                bevelEnabled: false,
+                ...this._getCornerRadii(radius, guiItem.width, guiItem.height)
+            });
+            buttonContainer.setAttribute('position', '0 0 0');
         }
         else
         {
@@ -161,12 +201,15 @@ AFRAME.registerComponent('sxr-button', {
         buttonContainer.setAttribute('material', `shader: flat;
                                                   opacity: 1;
                                                   side:double;
-                                                  color: ${data.borderColor}
+                                                  color: ${this._isFocused ? data.focusColor : data.borderColor}
                                                   `);
         el.appendChild(buttonContainer);
         this.buttonContainer = buttonContainer;
 
         const buttonEntity = document.createElement("a-entity");
+        const faceWidth = guiItem.width - guiItem.gap;
+        const faceHeight = guiItem.height - guiItem.gap;
+        const faceRadius = Math.max(0, radius - guiItem.gap / 2);
         if(guiItem.bevel){
             const bevelsize_adjust = guiItem.bevelSize*1;
             const bevelthickness_adjust = guiItem.bevelThickness;
@@ -177,6 +220,19 @@ AFRAME.registerComponent('sxr-button', {
                                                    bevelSize: ${guiItem.bevelSize};
                                                    `);
             buttonEntity.setAttribute('position', `0 0 0`);
+            if (radius > 0) {
+                buttonEntity.setAttribute('bevelbox', this._getCornerRadii(faceRadius, faceWidth * (1 - bevelsize_adjust), faceHeight * (1 - bevelsize_adjust)));
+            }
+        }
+        else if (radius > 0) {
+            buttonEntity.setAttribute('bevelbox', {
+                width: faceWidth,
+                height: faceHeight,
+                depth: guiItem.depth,
+                bevelEnabled: false,
+                ...this._getCornerRadii(faceRadius, faceWidth, faceHeight)
+            });
+            buttonEntity.setAttribute('position', '0 0 0');
         }
         else
         {
@@ -195,6 +251,15 @@ AFRAME.registerComponent('sxr-button', {
         el.appendChild(buttonEntity);
         this.buttonEntity = buttonEntity;
     },
+    _getCornerRadii: function (radius, width, height) {
+        const clampedRadius = Math.max(0, Math.min(radius, width / 2, height / 2));
+        return {
+            topLeftRadius: clampedRadius,
+            topRightRadius: clampedRadius,
+            bottomLeftRadius: clampedRadius,
+            bottomRightRadius: clampedRadius
+        };
+    },
     // dispose the owned geometry entities and rebuild from current sxr-item
     // data; invoked on live dimension changes
     _rebuild: function () {
@@ -207,8 +272,10 @@ AFRAME.registerComponent('sxr-button', {
 
         if (this.buttonContainer) { SXR.removeEntity(this.buttonContainer); }
         if (this.buttonEntity) { SXR.removeEntity(this.buttonEntity); }
+        if (this.buttonBacking) { SXR.removeEntity(this.buttonBacking); }
         this.buttonContainer = null;
         this.buttonEntity = null;
+        this.buttonBacking = null;
         this._buildGeometry();
         this.buttonEntity.setAttribute('material', `shader: flat;
                                                     opacity: 1;
@@ -230,6 +297,10 @@ AFRAME.registerComponent('sxr-button', {
         el.removeEventListener(this.data.on, this._onActivate);
         el.removeEventListener('keyup', this._onKeyUp);
         el.removeEventListener('componentchanged', this._onItemChanged);
+        if (this.buttonBacking) {
+            SXR.removeEntity(this.buttonBacking);
+            this.buttonBacking = null;
+        }
         if (this.textEntity) {
             SXR.removeEntity(this.textEntity);
             this.textEntity = null;
@@ -262,13 +333,17 @@ AFRAME.registerComponent('sxr-button', {
         this.buttonContainer.setAttribute('material', `shader: flat;
                                                      opacity: 1;
                                                      side:double;
-                                                     color: ${data.borderColor}
+                                                     color: ${this._isFocused ? data.focusColor : data.borderColor}
                                                      `);
         this.buttonEntity.setAttribute('material', `shader: flat;
                                                     opacity: 1;
                                                     side:double;
                                                     color: ${data.toggleState ? data.activeColor : data.backgroundColor}
                                                     `);
+        if (this.buttonBacking) {
+            this.buttonBacking.setAttribute('rounded', 'color', data.backgroundColor);
+            this.buttonBacking.setAttribute('material', 'color', data.backgroundColor);
+        }
 
         const textKey = [data.value, data.fontSize, data.fontFamily, data.fontColor].join('|');
         if (!hasOld || textKey !== this._lastTextKey) {
@@ -310,7 +385,7 @@ AFRAME.registerComponent('sxr-button', {
         if(guiItem.bevel){
             textEntity.setAttribute('position', `0 0 ${guiItem.depth+(guiItem.bevelThickness/2)+0.05}`);
         }else{
-            textEntity.setAttribute('position', `0 0 ${(guiItem.depth/2)+0.05}`);
+            textEntity.setAttribute('position', `0 0 ${(this._radius > 0 ? guiItem.depth : guiItem.depth/2)+0.05}`);
         }
         this.buttonEntity.appendChild(textEntity);
     },
