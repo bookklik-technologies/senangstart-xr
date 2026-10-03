@@ -5,7 +5,28 @@
   <title>SenangStart XR - Component Showcase</title>
   <meta name="description" content="A complete SenangStart XR component showcase for A-Frame and WebXR">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="js/senangstart-xr.js?v=20261004-rounded-buttons"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="js/senangstart-xr.js?v=20261004-glass"></script>
+  <script src="js/glass-showcase.js?v=20261004-glass"></script>
+  <style>
+    body { margin: 0; background: #080D1C; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .gaze-setting {
+      position: fixed; top: 20px; left: 20px; z-index: 10;
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 16px; border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px; color: #D7E3F7; background: rgba(30, 42, 65, 0.48);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 8px 28px rgba(0, 0, 0, 0.16);
+      backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
+      font-size: 12px; letter-spacing: 0.01em; cursor: pointer;
+    }
+    .gaze-setting input { accent-color: #0A84FF; margin: 0; }
+    .gaze-setting:focus-within { outline: 2px solid #91C7FF; outline-offset: 3px; }
+    .desktop-hint { opacity: 0.65; }
+    @media (max-width: 640px) {
+      .gaze-setting { top: 12px; left: 12px; padding: 10px 13px; }
+      .desktop-hint { display: none; }
+    }
+  </style>
   <script>
     const DEMO_FONT = '../Outfit-Regular.ttf';
 
@@ -51,11 +72,11 @@
     function onPrimaryClick() {
       state.clicks += 1;
       setMetric('#clickMetric', `Clicks ${state.clicks}`);
-      setStatus(`Rounded button pressed ${state.clicks} time${state.clicks === 1 ? '' : 's'}`);
+      setStatus(`Glass button pressed ${state.clicks} time${state.clicks === 1 ? '' : 's'}`);
     }
 
     function onBevelClick() {
-      setStatus('Rounded beveled CTA pressed - rounded corners and bevel styling are active');
+      setStatus('Primary action activated');
     }
 
     function onIconClick() {
@@ -180,13 +201,13 @@
   </script>
 </head>
 <body>
-  <label style="position:fixed;left:12px;top:12px;z-index:10;color:#F1F5F9;background:#202127;padding:8px;font:14px sans-serif">
-    <input id="gazeMode" type="checkbox"> Gaze selection (desktop: click/tap or Tab to controls)
+  <label class="gaze-setting">
+    <input id="gazeMode" type="checkbox"> Gaze selection <span class="desktop-hint">Click or Tab to explore</span>
   </label>
-  <a-scene background="color: #161618">
-    <a-assets>
-      <img id="gridTexture" alt="subtle grid" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23161618'/%3E%3Cpath d='M0 24H96M0 48H96M0 72H96M24 0V96M48 0V96M72 0V96' stroke='%231B1B1F' stroke-width='1' opacity='.72'/%3E%3C/svg%3E">
-    </a-assets>
+  <a-scene glass-showcase background="color: #080D1C">
+    <a-entity geometry="primitive: plane; width: 26; height: 15"
+      material="shader: showcase-atmosphere; depthWrite: false"
+      position="0 1.7 -2"></a-entity>
 
     <a-entity id="rig" position="0 1.6 4.4">
       <a-camera look-controls wasd-controls>
@@ -194,8 +215,8 @@
           raycaster="objects: [sxr-interactable]"
           fuse="false"
           color="#F1F5F9"
-          hover-color="#0EA5E9"
-          active-color="#2563EB"
+          hover-color="#73BBFF"
+          active-color="#0A84FF"
           design="ring"
           position="0 0 -1">
         </a-sxr-cursor>
@@ -204,35 +225,25 @@
       <a-entity laser-controls="hand: right" raycaster="objects: [sxr-interactable]"></a-entity>
     </a-entity>
 
-    <!-- <a-entity geometry="primitive: plane; width: 15; height: 8"
-              material="src: #gridTexture; repeat: 8 4; shader: flat; opacity: 0.45; transparent: true"
-              position="0 1.6 -1.1"></a-entity>
-    <a-entity geometry="primitive: ring; radiusInner: 2.9; radiusOuter: 3.05; thetaLength: 300"
-              material="color: #2563EB; shader: flat; opacity: 0.28; transparent: true"
-              position="-4.1 2.8 -0.8" rotation="0 0 -28"></a-entity>
-    <a-entity geometry="primitive: ring; radiusInner: 1.2; radiusOuter: 1.32; thetaLength: 220"
-              material="color: #0EA5E9; shader: flat; opacity: 0.22; transparent: true"
-              position="4.6 0.6 -0.75" rotation="0 0 42"></a-entity> -->
-
     <a-sxr-flex-container
       id="heroPanel"
       flex-direction="column"
       justify-content="center"
       align-items="center"
-      opacity=".5"
+      opacity="0.26"
       width="3.45"
       height="4.75"
       is-top-container="true"
-      panel-color="#ffffff"
-      panel-rounded="0.18"
+      panel-color="#7C91B8"
+      panel-rounded="0.26"
       position="-3.7 1.7 0">
 
       <a-sxr-label width="3.05" height="0.48"
         value="SenangStart XR"
         font-color="#ffffff"
-        background-color="#202127"
+        background-color="#25334F"
         opacity="0"
-        font-size="0.34"
+        font-size="0.30"
         text-depth="0.08"
         text-stroke-width="0"
         margin="0.03 0 0.04 0"></a-sxr-label>
@@ -240,7 +251,7 @@
       <a-sxr-label width="3.05" height="0.62"
         value="3D GUI primitives for A-Frame. Desktop: click or Tab to a widget — Enter/Space activate, arrows adjust sliders, 'b' presses the primary button."
         font-color="#ffffff"
-        background-color="#202127"
+        background-color="#25334F"
         opacity="0"
         font-size="0.135"
         line-height="0.19"
@@ -249,30 +260,30 @@
         margin="0.02 0 0.08 0"></a-sxr-label>
 
       <a-sxr-button width="2.8" height="0.54"
-        value="Rounded Button"
+        value="Glass Button"
         radius="0.12"
         onclick="onPrimaryClick"
         key="b"
         font-color="#F1F5F9"
-        border-color="#1B1B1F"
-        background-color="#202127"
-        hover-color="#0EA5E9"
-        active-color="#2563EB"
+        border-color="#657592"
+        background-color="#25334F"
+        hover-color="#73BBFF"
+        active-color="#0A84FF"
         margin="0.06 0 0.06 0"></a-sxr-button>
 
       <a-sxr-button width="2.8" height="0.58"
-        value="Rounded Beveled CTA"
+        value="Primary Action"
         radius="0.16"
         onclick="onBevelClick"
         bevel="true"
-        bevel-size="0.04"
-        bevel-thickness="0.12"
-        base-depth="0.04"
-        depth="0.12"
-        gap="0.05"
-        border-color="#0EA5E9"
-        background-color="#2563EB"
-        hover-color="#0EA5E9"
+        bevel-size="0.012"
+        bevel-thickness="0.018"
+        base-depth="0.012"
+        depth="0.045"
+        gap="0.025"
+        border-color="#73BBFF"
+        background-color="#0A84FF"
+        hover-color="#73BBFF"
         active-color="#F1F5F9"
         font-color="#F1F5F9"
         margin="0.06 0 0.07 0"></a-sxr-button>
@@ -283,11 +294,11 @@
         value="Interactive input"
         native-editing="true"
         onclick="onInputClick"
-        background-color="#F1F5F9"
-        border-color="#2563EB"
-        border-hover-color="#0EA5E9"
-        hover-color="#F1F5F9"
-        font-color="#161618"
+        background-color="#25334F"
+        border-color="#0A84FF"
+        border-hover-color="#73BBFF"
+        hover-color="#344766"
+        font-color="#F1F5F9"
         font-size="0.16"
         margin="0.07 0 0.07 0"></a-sxr-input>
 
@@ -298,8 +309,8 @@
         align="left"
         anchor="left"
         font-color="#F1F5F9"
-        background-color="#161618"
-        opacity="0.85"
+        background-color="#101B30"
+        opacity="0.28"
         font-size="0.135"
         line-height="0.19"
         text-depth="0.03"
@@ -316,20 +327,20 @@
       flex-direction="column"
       justify-content="center"
       align-items="center"
-      opacity=".5"
+      opacity="0.26"
       width="3.55"
       height="4.75"
       is-top-container="true"
-      panel-color="#ffffff"
-      panel-rounded="0.18"
+      panel-color="#7C91B8"
+      panel-rounded="0.26"
       position="0 1.7 0">
 
       <a-sxr-label width="3.1" height="0.38"
         value="Controls"
         font-color="#F1F5F9"
-        background-color="#202127"
+        background-color="#25334F"
         opacity="0"
-        font-size="0.26"
+        font-size="0.25"
         margin="0.02 0 0.05 0"></a-sxr-label>
 
       <a-sxr-flex-container
@@ -345,20 +356,20 @@
           onclick="onIconClick"
           icon="cog-6-tooth"
           icon-font-size="0.32"
-          border-color="#1B1B1F"
-          background-color="#202127"
-          hover-color="#0EA5E9"
-          active-color="#2563EB"
+          border-color="#657592"
+          background-color="#25334F"
+          hover-color="#73BBFF"
+          active-color="#0A84FF"
           margin="0 0.08 0 0"></a-sxr-icon-button>
 
         <a-sxr-icon-button width="0.58" height="0.58"
           onclick="onIconClick"
           icon="play"
           icon-font-size="0.32"
-          border-color="#1B1B1F"
-          background-color="#202127"
-          hover-color="#0EA5E9"
-          active-color="#2563EB"
+          border-color="#657592"
+          background-color="#25334F"
+          hover-color="#73BBFF"
+          active-color="#0A84FF"
           margin="0 0.08 0 0.08"></a-sxr-icon-button>
 
         <a-sxr-icon-button width="0.58" height="0.58"
@@ -366,10 +377,10 @@
           icon="star"
           icon-font-size="0.32"
           toggle="true"
-          border-color="#0EA5E9"
-          background-color="#202127"
-          hover-color="#0EA5E9"
-          active-color="#2563EB"
+          border-color="#73BBFF"
+          background-color="#25334F"
+          hover-color="#73BBFF"
+          active-color="#0A84FF"
           margin="0 0 0 0.08"></a-sxr-icon-button>
       </a-sxr-flex-container>
 
@@ -379,10 +390,10 @@
         icon-font-size="0.26"
         value="Icon + Label Button"
         font-size="0.145"
-        border-color="#0EA5E9"
-        background-color="#202127"
-        hover-color="#0EA5E9"
-        active-color="#2563EB"
+        border-color="#73BBFF"
+        background-color="#25334F"
+        hover-color="#73BBFF"
+        active-color="#0A84FF"
         margin="0.04 0 0.06 0"></a-sxr-icon-label-button>
 
       <a-sxr-toggle width="2.9" height="0.48"
@@ -390,10 +401,11 @@
         onclick="onToggle"
         key="t"
         font-size="0.15"
+        font-color="#F1F5F9"
         background-color="#F1F5F9"
-        border-color="#1B1B1F"
-        hover-color="#0EA5E9"
-        active-color="#2563EB"
+        border-color="#657592"
+        hover-color="#73BBFF"
+        active-color="#0A84FF"
         handle-color="#F1F5F9"
         margin="0.06 0 0.06 0"></a-sxr-toggle>
 
@@ -422,10 +434,11 @@
           value="Comfort"
           onclick="onRadioComfort"
           font-size="0.15"
+          font-color="#F1F5F9"
           background-color="#F1F5F9"
-          border-color="#1B1B1F"
-          hover-color="#0EA5E9"
-          active-color="#2563EB"
+          border-color="#657592"
+          hover-color="#73BBFF"
+          active-color="#0A84FF"
           margin="0.02 0 0.02 0"></a-sxr-radio>
 
         <a-sxr-radio id="radioFocus" width="2.9" height="0.48"
@@ -433,10 +446,11 @@
           value="Focus"
           onclick="onRadioFocus"
           font-size="0.15"
+          font-color="#F1F5F9"
           background-color="#F1F5F9"
-          border-color="#1B1B1F"
-          hover-color="#0EA5E9"
-          active-color="#2563EB"
+          border-color="#657592"
+          hover-color="#73BBFF"
+          active-color="#0A84FF"
           margin="0.02 0 0 0"></a-sxr-radio>
       </a-sxr-flex-container>
 
@@ -459,12 +473,12 @@
       justify-content="center"
       align-items="center"
       item-padding="0.08"
-      opacity=".5"
+      opacity="0.26"
       width="3.65"
       height="4.75"
       is-top-container="true"
-      panel-color="#ffffff"
-      panel-rounded="0.18"
+      panel-color="#7C91B8"
+      panel-rounded="0.26"
       position="3.75 1.7 0">
 
       <a-sxr-label width="3.1" height="0.38"
@@ -485,7 +499,7 @@
             font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
           <a-sxr-circle-loader id="circleLoader"
             width="0.8" height="0.8" loaded="0.64"
-            active-color="#2563EB" background-color="#161618"
+            active-color="#0A84FF" background-color="#101B30"
             font-color="#F1F5F9" font-size="0.2"></a-sxr-circle-loader>
         </a-sxr-flex-container>
 
@@ -497,8 +511,8 @@
             font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
           <a-sxr-circle-timer id="circleTimer"
             width="0.8" height="0.8" count-down="12"
-            active-color="#0EA5E9" border-color="#1B1B1F"
-            background-color="#161618" font-color="#F1F5F9"
+            active-color="#73BBFF" border-color="#657592"
+            background-color="#101B30" font-color="#F1F5F9"
             font-size="0.2"></a-sxr-circle-timer>
         </a-sxr-flex-container>
       </a-sxr-flex-container>
@@ -511,7 +525,7 @@
           font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
         <a-sxr-progressbar id="linearProgress"
           width="2.9" height="0.14" percent="0.64"
-          background-color="#161618" active-color="#2563EB"></a-sxr-progressbar>
+          background-color="#101B30" active-color="#0A84FF"></a-sxr-progressbar>
       </a-sxr-flex-container>
 
       <a-sxr-flex-container
@@ -522,9 +536,9 @@
           font-size="0.13" line-height="0.17" opacity="0"></a-sxr-label>
         <a-sxr-slider width="2.9" height="0.32"
           percent="0.42" onclick="onSlide"
-          background-color="#F1F5F9" border-color="#1B1B1F"
-          active-color="#2563EB" handle-color="#F1F5F9"
-          hover-color="#0EA5E9"></a-sxr-slider>
+          background-color="#25334F" border-color="#657592"
+          active-color="#0A84FF" handle-color="#F1F5F9"
+          hover-color="#73BBFF"></a-sxr-slider>
       </a-sxr-flex-container>
 
       <!-- Reserve the full row for the slider and its moving value/hover bubbles. -->
@@ -539,31 +553,15 @@
           output-function="formatPercent"
           output-width="0.7" output-font-size="0.14" output-text-depth="0.03"
           hover-font-size="0.12"
-          active-color="#2563EB" background-color="#161618"
-          border-color="#1B1B1F" handle-color="#F1F5F9"
-          hover-color="#0EA5E9" opacity="0.9"></a-sxr-vertical-slider>
+          active-color="#0A84FF" background-color="#101B30"
+          border-color="#657592" handle-color="#F1F5F9"
+          hover-color="#73BBFF" opacity="0.9"></a-sxr-vertical-slider>
       </a-sxr-flex-container>
     </a-sxr-flex-container>
 
-    <!-- <a-entity position="0 -0.82 0.05">
-      <a-sxr-cursor fuse="false" design="dot" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0"></a-sxr-cursor>
-      <a-sxr-cursor fuse="false" design="ring" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0" position="0.42 0 0"></a-sxr-cursor>
-      <a-sxr-cursor fuse="false" design="cross" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0" position="0.84 0 0"></a-sxr-cursor>
-      <a-sxr-cursor fuse="false" design="reticle" color="#F1F5F9" hover-color="#0EA5E9" active-color="#2563EB" distance="0" position="1.26 0 0"></a-sxr-cursor>
-      <a-sxr-label width="1.75" height="0.26"
-        value="Cursor styles"
-        align="left"
-        anchor="left"
-        font-color="#F1F5F9"
-        background-color="#161618"
-        opacity="0"
-        font-size="0.11"
-        position="-1.4 0 0.01"></a-sxr-label>
-    </a-entity> -->
-
     <a-entity light="type: ambient; intensity: 0.9"></a-entity>
     <a-entity light="type: directional; intensity: 0.75" position="2 4 3"></a-entity>
-    <a-entity light="type: point; intensity: 0.55; color: #2563EB" position="-3 2.8 1.5"></a-entity>
+    <a-entity light="type: point; intensity: 0.55; color: #0A84FF" position="-3 2.8 1.5"></a-entity>
   </a-scene>
 </body>
 </html>

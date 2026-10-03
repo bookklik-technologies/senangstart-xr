@@ -7,5 +7,6 @@ coverage/
 artifacts/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+docs/.vitepress/.temp/
 docs/public/demo/senangstart-xr.min.js
 docs/public/demo/Outfit-Regular.ttf

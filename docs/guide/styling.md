@@ -51,6 +51,47 @@ The fastest way to restyle a panel is to set style properties on its
 
 Individual widgets override inherited values by declaring their own.
 
+## Glass surfaces
+
+The component showcase uses a translucent glass theme with rounded silhouettes,
+soft highlights, bright edges, and a blue-violet environment. The reusable
+`sxr-glass` component is opt-in; existing widget defaults are unchanged.
+
+```html
+<a-rounded width="3.5" height="4.75" radius="0.26" color="#7C91B8"
+  sxr-glass="opacity: 0.26; frost: 0.13; radius: 0.26; edge: 0.009">
+</a-rounded>
+```
+
+| Property | Default | Purpose |
+| -------- | ------- | ------- |
+| `opacity` | `0.38` | Surface opacity, clamped to 0–1. |
+| `frost` | `0.16` | Pale tint mixed into the surface, clamped to 0–1. |
+| `radius` | `0.12` | Rounded silhouette radius in world units. |
+| `edge` | `0.012` | Width of the edge highlight in world units. |
+| `axis` | `xy` | Local surface plane; use `xz` for cylinder faces. |
+
+Apply `sxr-glass` to the entity that owns the surface mesh. A top flex container's
+surface is its `components['sxr-flex-container'].panelBackground`; a button's
+face is its `components['sxr-button'].buttonEntity`. For example, after loading:
+
+```js
+const button = document.querySelector('a-sxr-button');
+button.components['sxr-button'].buttonEntity.setAttribute('sxr-glass', {
+  opacity: 0.55, frost: 0.12, radius: 0.12
+});
+```
+
+The treatment keeps the existing material's colors and animations, responds to
+geometry changes, and restores the original material settings when removed.
+It styles one untextured flat or standard material at a time; it does not style
+descendants or textured text and icons. Reapply it to replacement entities if a
+widget rebuilds its owned surfaces (the showcase theme does this automatically).
+
+This is a lightweight WebGL approximation of frosted glass, using transparency
+and procedural reflections rather than screen-space blur or physical refraction.
+A softly shaded backdrop makes the translucent effect visible in desktop and XR.
+
 ## Text font
 
 The default font family is `Outfit-Regular.ttf` (`SXR.fonts.default`), which is
