@@ -27,7 +27,7 @@ try {
     // Install the supported peer. Network, resolution and install failures
     // propagate as nonzero; there is deliberately no successful skip path.
     npm(['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, 'aframe@1.8.0'], fixture);
-    const packageDir = path.join(fixture, 'node_modules', 'senangstart-xr');
+    const packageDir = path.join(fixture, 'node_modules', ...info.name.split('/'));
     const installed = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
     for (const target of [installed.main, installed.exports['.'], 'dist/Outfit-Regular.ttf']) {
         const file = path.resolve(packageDir, target);
