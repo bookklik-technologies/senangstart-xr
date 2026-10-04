@@ -6,7 +6,7 @@ hero:
   text: 3D Interfaces for WebXR
   tagline: GUI components for A-Frame — from desktop pointers to VR controllers.
   image:
-    src: /logo.svg
+    src: /assets/senangstart-xr-logo.svg
     alt: SenangStart XR
   actions:
     - theme: brand
@@ -36,6 +36,12 @@ features:
     title: Design Tokens & Fonts
     details: Style your scenes with shared colors, the bundled Outfit typeface, custom fonts and icon helpers.
 ---
+
+<style>
+  .image-container .VPImage {
+    filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.2));
+  }
+</style>
 
 ## Quick Example
 

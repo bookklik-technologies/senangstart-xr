@@ -6,7 +6,7 @@ hero:
   text: Antara Muka 3D untuk WebXR
   tagline: Komponen GUI untuk A-Frame — daripada penuding desktop hingga pengawal VR.
   image:
-    src: /logo.svg
+    src: /assets/senangstart-xr-logo.svg
     alt: SenangStart XR
   actions:
     - theme: brand
@@ -36,6 +36,12 @@ features:
     title: Token Reka Bentuk & Fon
     details: Gayakan adegan anda dengan warna bersama, fon Outfit yang disertakan, fon tersuai dan pembantu ikon.
 ---
+
+<style>
+  .image-container .VPImage {
+    filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.2));
+  }
+</style>
 
 ## Contoh Ringkas
 

@@ -15,23 +15,19 @@
   --vp-button-brand-text: #fff;
   --vp-button-brand-hover-text: #fff;
   --vp-button-brand-active-text: #fff;
+  --vp-button-alt-border: #F1F5F9;
   --vp-button-alt-bg: #F1F5F9;
   --vp-button-alt-text: #3E4A5D;
+  --vp-button-alt-hover-border: #DBEAFE;
   --vp-button-alt-hover-bg: #DBEAFE;
   --vp-button-alt-hover-text: #2563EB;
   --vp-font-family-base: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --vp-font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 .dark {
-  --vp-c-brand-1: #93C5FD;
-  --vp-c-brand-2: #60A5FA;
   --vp-c-default-1: #CBD5E1;
   --vp-c-default-2: #94A3B8;
   --vp-c-default-3: #64748B;
-  --vp-button-alt-bg: #252A34;
-  --vp-button-alt-text: #E2E8F0;
-  --vp-button-alt-hover-bg: #334155;
-  --vp-button-alt-hover-text: #BFDBFE;
 }
 .vp-doc div[class*='language-'] { border-left: 3px solid #2563EB; }
 .VPSidebarItem.is-active > .item > .link > .text { color: var(--vp-c-brand-1); }

@@ -143,7 +143,7 @@ export default defineConfig({
   titleTemplate: ':title — SenangStart XR',
   description: '3D GUI components for A-Frame / WebXR',
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/senangstart-xr/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/senangstart-xr/assets/ss-logo.svg' }],
     ['meta', { name: 'theme-color', content: '#2563EB' }]
   ],
   locales: {
@@ -151,7 +151,7 @@ export default defineConfig({
     ms: { label: 'Bahasa Melayu', lang: 'ms', description: 'Komponen GUI 3D untuk A-Frame / WebXR', themeConfig: localeTheme(true) }
   },
   themeConfig: {
-    logo: '/logo.svg',
+    logo: '/assets/ss-logo.svg',
     siteTitle: 'SenangStart XR',
     socialLinks: [{ icon: 'github', link: github }],
     search: { provider: 'local', options: {
