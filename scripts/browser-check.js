@@ -6,6 +6,9 @@ const path = require('path');
 const http = require('http');
 const assert = require('assert/strict');
 const {chromium} = require('playwright');
+const aframeDist = path.dirname(require.resolve('aframe'));
+const aframePackage = JSON.parse(fs.readFileSync(path.join(aframeDist, '..', 'package.json'), 'utf8'));
+if (process.env.SXR_AFRAME) assert.equal(aframePackage.version, process.env.SXR_AFRAME, 'installed A-Frame package matches matrix');
 const root = path.resolve(__dirname, '..');
 const bundle = process.env.SXR_BUNDLE || 'senangstart-xr.min.js';
 assert(['senangstart-xr.js', 'senangstart-xr.min.js'].includes(bundle));
@@ -21,7 +24,7 @@ const server = http.createServer((req, res) => {
     }
     if (url.pathname === '/favicon.ico') { res.writeHead(204).end(); return; }
     const files = {
-        '/aframe.js': path.join(path.dirname(require.resolve('aframe')), 'aframe-master.min.js'),
+        '/aframe.js': path.join(aframeDist, 'aframe-master.min.js'),
         ['/dist/' + bundle]: path.join(root, 'dist', bundle),
         '/dist/Outfit-Regular.ttf': path.join(root, 'dist/Outfit-Regular.ttf'),
     };
@@ -49,6 +52,13 @@ const server = http.createServer((req, res) => {
             const checks = [];
             const check = (condition, name) => { if (!condition) throw new Error(name); checks.push(name); };
             const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+            // A-Frame primitive mappings update through MutationObserver callbacks.
+            // Poll component state so assertions wait for those asynchronous updates.
+            const checkEventually = async (condition, name) => {
+                const deadline = Date.now() + 5000;
+                while (!condition() && Date.now() < deadline) await wait(10);
+                check(condition(), name);
+            };
             const loaded = el => el.hasLoaded ? Promise.resolve() : new Promise(resolve => el.addEventListener('loaded', resolve, {once: true}));
             const scene = document.querySelector('a-scene');
             await SXR.registerFontFile(SXR.fonts.default);
@@ -56,17 +66,18 @@ const server = http.createServer((req, res) => {
             const container = document.querySelector('#layout');
             const first = document.querySelector('#first');
             check(container.components['sxr-flex-container'].data.fontColor === '#ff0000', 'primitive style mapping is parsed');
-            await wait(100);
-            check(first.components['sxr-label'].data.fontColor === '#ff0000', 'initial inherited color');
+            await checkEventually(() => first.components['sxr-label'].data.fontColor === '#ff0000', 'initial inherited color');
             container.setAttribute('font-color', '#00ff00');
-            check(first.components['sxr-label'].data.fontColor === '#00ff00', 'inherited colors update');
+            await checkEventually(() => first.components['sxr-label'].data.fontColor === '#00ff00', 'inherited colors update');
             first.setAttribute('font-color', '#0000ff');
+            await checkEventually(() => first.components['sxr-label'].data.fontColor === '#0000ff', 'authored child color is applied');
             container.setAttribute('font-color', '#ffffff');
+            const second = document.querySelector('#second');
+            await checkEventually(() => second.components['sxr-label'].data.fontColor === '#ffffff', 'inherited sibling colors update');
             check(first.components['sxr-label'].data.fontColor === '#0000ff', 'authored child color is preserved');
             container.setAttribute('height', 4);
             await wait(300);
             check(Math.abs(first.object3D.position.y - 1.75) < 0.001, 'row edge uses half child height after resize');
-            const second = document.querySelector('#second');
             const previousX = second.object3D.position.x;
             first.setAttribute('width', 2);
             await wait(300);
@@ -101,7 +112,7 @@ const server = http.createServer((req, res) => {
             field.dispatchEvent(new Event('input'));
             check(input.components['sxr-input'].data.value === 'Typed value', 'native text synchronizes');
             input.setAttribute('native-editing', false);
-            check(!field.isConnected && !input.components['sxr-input'].nativeField, 'disabling native editing disposes field');
+            await checkEventually(() => !field.isConnected && !input.components['sxr-input'].nativeField, 'disabling native editing disposes field');
             for (const id of ['toggle', 'radio']) {
                 const el = document.getElementById(id);
                 const mesh = el.getObject3D('mesh');
@@ -135,9 +146,11 @@ const server = http.createServer((req, res) => {
             }
             const tail = counts.slice(6);
             check(tail.at(-1).geometries <= tail[0].geometries + 2 && tail.at(-1).textures <= tail[0].textures + 2, 'renderer resources stabilize after warm-up');
-            return {aframe: AFRAME.version, checks, resourceCounts: counts};
+            return {aframeRuntime: AFRAME.version, checks, resourceCounts: counts};
         });
-        if (process.env.SXR_AFRAME) assert.equal(report.aframe, process.env.SXR_AFRAME);
+        // Patch releases can retain the previous runtime version in their bundle.
+        // Validate the installed package above and record both versions for diagnosis.
+        report.aframe = aframePackage.version;
         await page.screenshot({path: path.join(output, '02-after-interactions.png')});
         fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({...report, bundle, errors}, null, 2));
         assert.deepEqual(errors, [], 'no browser errors or missing assets');
