@@ -9,7 +9,6 @@ A circular button showing an icon instead of text. Icons come from the
 | Property           | Description                                               | Default Value |
 | --------           | -------------------------------------------------------   | ------------- |
 | on                 | Event that triggers onclick action                        | click         |
-
 | font-color         | Text color for button label                               | #F1F5F9       |
 | border-color       | Border color of button                                    | #1B1B1F       |
 | background-color   | Background color of item                                  | #202127       |
@@ -24,7 +23,6 @@ A circular button showing an icon instead of text. Icons come from the
 | key-code           | Legacy numeric shortcut key (e.g. 32 for Space)           | -1            |
 | toggle             | Toggle status                                             | false         |
 | toggle-state       | Setting the toggle button on/off state                    | false         |
-
 | height             | Height of item                                            | 1             |
 | width              | Width of item                                             | 1             |
 | margin             | Margin around item                                        | 0 0 0 0       |

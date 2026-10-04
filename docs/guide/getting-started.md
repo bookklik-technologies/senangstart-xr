@@ -2,7 +2,7 @@
 
 SenangStart XR is a GUI framework built on top of [A-Frame](https://aframe.io). It ships as a single browser bundle that registers 18 `sxr-*` components and their matching `a-sxr-*` HTML primitives on the global `AFRAME` object.
 
-<DemoWidget title="Controls in a live scene" src="/senangstart-xr/demo/controls.html" height="420" />
+<DemoWidget title="Controls in a live scene" src="/demo/controls.html" height="420" />
 
 Supported A-Frame versions are **1.7.x and 1.8.x** (peer dependency `>=1.7.0 <1.9.0`). See [A-Frame Versions](/guide/aframe-versions).
 

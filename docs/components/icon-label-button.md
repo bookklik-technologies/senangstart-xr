@@ -8,7 +8,6 @@ A button combining an icon and a text label.
 | Property         | Description                                            | Default Value |
 | --------         | ----------------------------------------------------   | ------------- |
 | on               | Event that triggers onclick action                     | click         |
-
 | icon              | SenangStart icon slug, e.g. `check`, `sparkles`        | check         |
 | icon-active      | Icon slug for the active state                         | ''            |
 | icon-font        | Legacy option retained for compatibility               | ''            |
@@ -16,7 +15,6 @@ A button combining an icon and a text label.
 | icon-occlusion   | Let scene geometry occlude the icon (opt-in depth test) | false        |
 | key              | Textual shortcut key that activates the widget (e.g. 'e') |            |
 | key-code         | Legacy numeric shortcut key (e.g. 32 for Space)        | -1            |
-
 | font-color       | Text color for button label                            | #F1F5F9       |
 | value            | Text of button label                                   | ''            |
 | font-family      | Font family for button                                 | Outfit-Regular.ttf |
@@ -27,7 +25,6 @@ A button combining an icon and a text label.
 | active-color     | Background color when button is pressed down           | #2563EB       |
 | toggle           | Toggle status                                          | false         |
 | toggle-state     | Setting the toggle button on/off state                 | false         |
-
 | height           | Height of button                                       | 1             |
 | width            | Width of button                                        | 1             |
 | margin           | Margin around button                                   | 0 0 0 0       |

@@ -4,7 +4,7 @@ A standard button with a text label. Supports hover/active color animations,
 an optional toggle mode, focus color, rounded corners, optional bevel, and keyboard activation
 via `Enter` / `Space`.
 
-<DemoWidget title="Buttons in a live scene" src="/senangstart-xr/demo/controls.html" height="400" />
+<DemoWidget title="Buttons in a live scene" src="/demo/controls.html" height="400" />
 
 ### a-sxr-button Component
 #### Properties
@@ -25,7 +25,6 @@ via `Enter` / `Space`.
 | toggle-state       | Setting the toggle button on/off state                    | false         |
 | key                | Textual shortcut key that activates the widget (e.g. 'e') |               |
 | key-code           | Legacy numeric shortcut key (e.g. 32 for Space)           | -1            |
-
 | width              | Width of button                                           | 1             |
 | height             | Height of button                                          | 1             |
 | depth              | Depth of button                                           | 0.02          |
@@ -33,7 +32,6 @@ via `Enter` / `Space`.
 | gap                | Gap between button and base                               | 0.025         |
 | margin             | Margin around button                                      | 0 0 0 0       |
 | radius             | Corner radius shared by all four button corners           | 0             |
-
 | bevel              | If true, button bevel is enabled                          | false         |
 | bevel-segments     | Segments of the button bevel                              | 5             |
 | steps              | Steps of the button bevel                                 | 2             |

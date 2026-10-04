@@ -3,7 +3,7 @@
 A horizontal slider. The value is a percent from `0.0` to `1.0`; it responds
 to clicks at the exact hit point, arrow keys, and Home/End.
 
-<DemoWidget title="Sliders, input and progress meters" src="/senangstart-xr/demo/values.html" height="420" />
+<DemoWidget title="Sliders, input and progress meters" src="/demo/values.html" height="420" />
 
 ### a-sxr-slider Component
 #### Properties

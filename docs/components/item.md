@@ -34,7 +34,7 @@ Shared dimensions, depth, margin and bevel.
 `margin` is a `vec4` and follows the CSS shorthand order
 (top, right, bottom, left).
 
-Read the current values at runtime with the [`SXR.getItem`](/api/sxr-namespace#getitem)
+Read the current values at runtime with the [`SXR.getItem`](/api/sxr-namespace#sxr-getitem-el)
 helper, which falls back to these documented defaults when the widget is
 placed on an ordinary entity.
 

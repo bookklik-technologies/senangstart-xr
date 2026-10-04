@@ -15,7 +15,6 @@ A switch with an animated track and handle. Exposes `role="switch"` and a
 | active           | Whether the toggle is enabled                             | true           |
 | toggle           | Toggle status                                             | false          |
 | toggle-state     | Setting the toggle toggle button on/off state             | false          |
-
 | value            | Text of the toggle button label                           | ''             |
 | font-family      | Font family for toggle button                             | Outfit-Regular.ttf |
 | font-size        | Font size for toggle button                               | 0.2            |
@@ -26,7 +25,6 @@ A switch with an animated track and handle. Exposes `role="switch"` and a
 | hover-color      | Background color when toggle button is in hover state     | #0EA5E9        |
 | handle-color     | Color of the toggle handle                                | #F1F5F9        |
 | active-color     | Background color when toggle button is pressed down       | #2563EB        |
-
 | height           | Height of toggle button                                   | 1              |
 | width            | Width of toggle button                                    | 1              |
 | margin           | Margin around toggle button                               | 0 0 0 0        |

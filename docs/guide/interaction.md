@@ -1,6 +1,6 @@
 # Interaction
 
-<DemoWidget title="Interactive controls: click, keyboard and fuse" src="/senangstart-xr/demo/controls.html" height="400" />
+<DemoWidget title="Interactive controls: click, keyboard and fuse" src="/demo/controls.html" height="400" />
 
 ## Callbacks vs. events
 

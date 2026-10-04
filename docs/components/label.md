@@ -17,7 +17,6 @@ A canvas-rendered text label with wrapping, alignment and optional stroke.
 | font-color       | Text color of label                                     | #F1F5F9        |
 | background-color | Background color of label                               | #202127        |
 | opacity          | Opacity of the label background                         | 1.0            |
-
 | text-depth       | distance from the text to label background              | 0.01           |
 | text-occlusion   | Let scene geometry occlude the text (opt-in depth test)  | false          |
 | text-stroke-color  | Color of the text stroke (canvas stroke style)        | ''             |

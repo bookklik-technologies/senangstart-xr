@@ -12,7 +12,6 @@ set, and the group supports WAI-ARIA arrow-key navigation.
 | checked          | Whether the radio is initially selected                   | false          |
 | active           | Whether the radio is enabled                              | true           |
 | group            | Group name; selecting one radio unchecks same-group radios | ''            |
-
 | value            | Text of the radio button label                            | ''             |
 | font-family      | Font family for radio button                              | Outfit-Regular.ttf |
 | font-size        | Font size for radio button                                | 0.2            |
@@ -23,7 +22,6 @@ set, and the group supports WAI-ARIA arrow-key navigation.
 | handle-color     | Color of the radio center handle                          | #202127        |
 | active-color     | Background color when radio button is pressed down        | #2563EB        |
 | radiosizecoef    | Scale factor for the radio circle size                    | 1              |
-
 | key              | Textual shortcut key that activates the widget (e.g. 'e') |            |
 | key-code         | Legacy numeric shortcut key (e.g. 32 for Space)        | -1            |
 | width            | Width of radio button                                     | 1              |

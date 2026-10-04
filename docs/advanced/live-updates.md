@@ -29,7 +29,7 @@ button.setAttribute('width', '3')             // geometry rebuilds
 ## How it works
 
 Components subscribe to A-Frame's `componentchanged` event. The
-[`SXR.watchGuiItem`](/api/sxr-namespace#sxrwatchguitel-callback) helper filters
+[`SXR.watchGuiItem`](/api/sxr-namespace#sxr-watchguiitem-el-callback) helper filters
 that stream for `sxr-item` changes and hands the new data to the owning
 component, which rebuilds only what is affected:
 
@@ -66,7 +66,7 @@ callbacks receive `(percent)` for **both** pointer and keyboard activation.
 
 ## Disposal
 
-When removing widgets, use [`SXR.removeEntity`](/api/sxr-namespace#removeentity)
+When removing widgets, use [`SXR.removeEntity`](/api/sxr-namespace#sxr-removeentity-entity)
 rather than `parentNode.removeChild(el)` so canvas textures, materials and
 geometries are disposed instead of leaking:
 

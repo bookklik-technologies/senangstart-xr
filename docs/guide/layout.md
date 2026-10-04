@@ -3,7 +3,7 @@
 `a-sxr-flex-container` arranges child widgets in a 3D panel using a
 flexbox-inspired layout engine.
 
-<DemoWidget title="Flex container layout and style inheritance" src="/senangstart-xr/demo/layout.html" height="420" />
+<DemoWidget title="Flex container layout and style inheritance" src="/demo/layout.html" height="420" />
 
 ::: warning `opacity` default
 The container's default `opacity` is `0.0`, so a freshly added container is

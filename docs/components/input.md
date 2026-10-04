@@ -15,7 +15,6 @@ and IME support.
 | native-editing     | Opt-in: activation focuses a synchronized native text field; emits `input` on changes and `change` on commit | false |
 | key                | Textual shortcut key that activates the widget (e.g. 'e') |            |
 | key-code           | Legacy numeric shortcut key (e.g. 32 for Space)       | -1            |
-
 | font-size          | Font size for input                                   | 0.2            |
 | font-family        | Font family for input                                 | Outfit-Regular.ttf |
 | font-color         | Text input color                                      | #161618        |
@@ -23,7 +22,6 @@ and IME support.
 | background-color   | Background color of input                             | #F1F5F9        |
 | border-hover-color | Border color when input is in hover state             | #0EA5E9        |
 | hover-color        | Background color when input is in hover state         | #F1F5F9        |
-
 | margin             | Margin around item                                    | 0 0 0 0        |
 | height             | Height of item                                        | 1              |
 | width              | Width of item                                         | 1              |

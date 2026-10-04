@@ -1,10 +1,11 @@
 import { h } from 'vue'
+import { withBase } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import './custom.css'
 
 /**
  * Embeds a live A-Frame scene from docs/public/demo as an iframe.
- * Usage: <DemoWidget src="/senangstart-xr/demo/controls.html" height="420" />
+ * Usage: <DemoWidget src="/demo/controls.html" height="420" />
  */
 const DemoWidget = {
   name: 'DemoWidget',
@@ -17,11 +18,10 @@ const DemoWidget = {
     return () =>
       h('div', { class: 'demo-widget' }, [
         h('iframe', {
-          src: props.src,
+          src: withBase(props.src),
           title: props.title,
           height: props.height,
           loading: 'lazy',
-          frameborder: '0',
           allow: 'xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer'
         })
       ])

@@ -2,7 +2,7 @@
 
 A countdown ring with 25/50/75/100 tick marks and a remaining-seconds readout.
 
-<DemoWidget title="Circle timer with progress meters" src="/senangstart-xr/demo/values.html" height="420" />
+<DemoWidget title="Circle timer with progress meters" src="/demo/values.html" height="420" />
 
 ### a-sxr-circle-timer Component
 #### Properties
@@ -15,10 +15,8 @@ A countdown ring with 25/50/75/100 tick marks and a remaining-seconds readout.
 | border-color       | Color of indicators that show 25/50/75/100 progress       | #1B1B1F       |
 | background-color   | Background color of item                                  | #202127       |
 | active-color       | Color of ring that indicates countdown progress           | #2563EB       |
-
 | count-down         | Initial countdown value in seconds                        | 10            |
 | callback           | Name of a global function that fires when countdown expires | ''          |
-
 | width              | Width of item                                             | 1             |
 | height             | Height of item                                            | 1             |
 | margin             | Margin around item                                        | 0 0 0 0       |
