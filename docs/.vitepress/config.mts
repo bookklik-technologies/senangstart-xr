@@ -144,7 +144,13 @@ export default defineConfig({
   description: '3D GUI components for A-Frame / WebXR',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/senangstart-xr/assets/ss-logo.svg' }],
-    ['meta', { name: 'theme-color', content: '#2563EB' }]
+    ['meta', { name: 'theme-color', content: '#2563EB' }],
+    ['script', {
+      src: 'https://web.senanglab.com/widget.js',
+      'data-site': '8df0c88f-8348-4e07-90f3-d2985119afd5',
+      referrerpolicy: 'no-referrer',
+      defer: ''
+    }],
   ],
   locales: {
     root: { label: 'English', lang: 'en', themeConfig: localeTheme(false) },
