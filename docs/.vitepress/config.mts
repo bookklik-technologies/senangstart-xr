@@ -140,10 +140,9 @@ export default defineConfig({
   appearance: true,
   lastUpdated: true,
   title: 'SenangStart XR',
-  titleTemplate: ':title — SenangStart XR',
   description: '3D GUI components for A-Frame / WebXR',
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/senangstart-xr/assets/ss-logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', href: 'https://senangstart.com/img/ss_icon_accent.svg' }],
     ['meta', { name: 'theme-color', content: '#2563EB' }],
     ['script', {
       src: 'https://web.senanglab.com/widget.js',
